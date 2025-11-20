@@ -1,0 +1,5 @@
+{
+  "name": "Suri Queue Dashboard",
+  "description": "A real-time dashboard to monitor customer waiting queues using the Suri Chatbot API. Features auto-refresh, wait time calculation, and detailed contact lists.",
+  "requestFramePermissions": []
+}
