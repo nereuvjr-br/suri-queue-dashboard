@@ -3,6 +3,8 @@ import { AppConfig, SuriContact, SuriAttendant } from '../types';
 import ConfigModal from './ConfigModal';
 import WaitingTable from './WaitingTable';
 import ActiveTeamDashboard from './ActiveTeamDashboard';
+import AttendantStatusDashboard from './AttendantStatusDashboard';
+import DepartmentStatusDashboard from './DepartmentStatusDashboard';
 import { parseISO, subSeconds, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatSmartDuration, getBusinessMinutes, generateDashboardPages, DashboardColumn } from '../utils';
@@ -20,11 +22,13 @@ interface TvDashboardProps {
     onSaveConfig: (config: AppConfig) => void;
 }
 
-const VIEW_DURATION = 15000; // 15 seconds per view
+const VIEW_DURATION = Number(import.meta.env.VITE_VIEW_DURATION) || 15000; // 15 seconds per view
 
 type DashboardView =
     | { type: 'waiting'; pageIndex: number; columns: DashboardColumn[] }
-    | { type: 'active'; pageIndex: number; columns: DashboardColumn[] };
+    | { type: 'active'; pageIndex: number; columns: DashboardColumn[] }
+    | { type: 'attendants'; pageIndex: number; columns: [] }
+    | { type: 'departments'; pageIndex: number; columns: [] };
 
 const TvDashboard: React.FC<TvDashboardProps> = ({
     config,
@@ -42,9 +46,8 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
     const [isPaused, setIsPaused] = useState(false);
     const [progressKey, setProgressKey] = useState(0);
 
-    const { portalStatus, apiStatus } = useSystemStatus();
+    const { portalStatus, apiStatus, userApiStatus } = useSystemStatus();
 
-    // ... (rest of the component logic)
     const waitingPages = useMemo(() =>
         generateDashboardPages(waitingContacts, departmentMap),
         [waitingContacts, departmentMap]
@@ -64,32 +67,46 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
         activePages.forEach((page, index) => {
             v.push({ type: 'active', pageIndex: index, columns: page });
         });
+        // Add Attendants View if there are active contacts
+        if (activeContacts.length > 0) {
+            v.push({ type: 'attendants', pageIndex: 0, columns: [] });
+            v.push({ type: 'departments', pageIndex: 0, columns: [] });
+        }
         return v;
-    }, [waitingPages, activePages]);
+    }, [waitingPages, activePages, activeContacts.length]);
 
     // Metrics Calculation
     const metrics = useMemo(() => {
         const now = new Date();
-        let totalSeconds = 0;
-        let maxSeconds = 0;
+        let totalWaitingSeconds = 0;
+        let maxWaitingSeconds = 0;
         let slaBreachedCount = 0;
+
+        // Active metrics
+        let totalActiveSeconds = 0;
 
         waitingContacts.forEach(c => {
             const activityDate = parseISO(c.lastActivity);
             const businessMinutes = getBusinessMinutes(activityDate, now);
             const businessSeconds = businessMinutes * 60;
 
-            totalSeconds += businessSeconds;
-            if (businessSeconds > maxSeconds) maxSeconds = businessSeconds;
+            totalWaitingSeconds += businessSeconds;
+            if (businessSeconds > maxWaitingSeconds) maxWaitingSeconds = businessSeconds;
             if (businessMinutes >= (config.slaLimit || 15)) slaBreachedCount++;
+        });
+
+        activeContacts.forEach(c => {
+            const duration = Math.max(0, (now.getTime() - parseISO(c.lastActivity).getTime()) / 1000);
+            totalActiveSeconds += duration;
         });
 
         return {
             totalWaiting: waitingContacts.length,
             activeContacts,
-            avgWaitTimeSeconds: waitingContacts.length > 0 ? Math.floor(totalSeconds / waitingContacts.length) : 0,
-            longestWaitTimeSeconds: maxSeconds,
-            slaBreachedCount
+            avgWaitTimeSeconds: waitingContacts.length > 0 ? Math.floor(totalWaitingSeconds / waitingContacts.length) : 0,
+            longestWaitTimeSeconds: maxWaitingSeconds,
+            slaBreachedCount,
+            avgActiveTimeSeconds: activeContacts.length > 0 ? Math.floor(totalActiveSeconds / activeContacts.length) : 0
         };
     }, [waitingContacts, activeContacts, config.slaLimit]);
 
@@ -112,6 +129,15 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
     }, [isPaused, isConfigOpen, views.length]);
 
     const currentView = views[currentViewIndex % views.length] || views[0];
+
+    const handleNextView = () => {
+        setCurrentViewIndex(current => (current + 1) % views.length);
+        setProgressKey(k => k + 1);
+    };
+
+    const togglePause = () => {
+        setIsPaused(prev => !prev);
+    };
 
     return (
         <div className="min-h-screen bg-zinc-950 text-zinc-200 font-sans flex flex-col relative overflow-hidden selection:bg-blue-500 selection:text-white scanline">
@@ -155,10 +181,33 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                    {/* Controls */}
+                    <div className="flex items-center gap-1 bg-zinc-900/50 p-1 rounded border border-zinc-800 mr-2">
+                        <button
+                            onClick={togglePause}
+                            className={`p-2 transition-colors rounded ${isPaused ? 'text-amber-500 hover:bg-amber-500/10' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+                            title={isPaused ? "Retomar Rotação" : "Pausar Rotação"}
+                        >
+                            {isPaused ? (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            ) : (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            )}
+                        </button>
+                        <button
+                            onClick={handleNextView}
+                            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors rounded"
+                            title="Próxima Tela"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </button>
+                    </div>
+
                     <button
                         onClick={() => setIsConfigOpen(true)}
                         className="p-2 text-zinc-600 hover:text-white transition-colors border border-transparent hover:border-zinc-700 rounded"
+                        title="Configurações"
                     >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     </button>
@@ -176,6 +225,10 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
                         <div className={`w-2 h-2 rounded-full ${apiStatus === 'online' ? 'bg-emerald-500' : 'bg-red-500'} animate-pulse`} />
                         <span className={`text-[10px] font-bold uppercase tracking-widest ${apiStatus === 'online' ? 'text-emerald-500' : 'text-red-500'}`}>Suri API</span>
                     </div>
+                    <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${userApiStatus === 'online' ? 'bg-emerald-500' : 'bg-red-500'} animate-pulse`} />
+                        <span className={`text-[10px] font-bold uppercase tracking-widest ${userApiStatus === 'online' ? 'text-emerald-500' : 'text-red-500'}`}>User API</span>
+                    </div>
                 </div>
                 <div className="w-px h-8 bg-zinc-800 shrink-0" />
 
@@ -191,7 +244,7 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
                     </div>
                     <div className="w-px h-8 bg-zinc-800 shrink-0" />
                     <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">T. Médio</span>
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">T. Médio Esp.</span>
                         <span className="text-xl font-mono font-bold text-white leading-none">{formatSmartDuration(subSeconds(new Date(), metrics.avgWaitTimeSeconds))}</span>
                     </div>
                     <div className="w-px h-8 bg-zinc-800 shrink-0" />
@@ -208,14 +261,17 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
                             {metrics.slaBreachedCount}
                         </span>
                     </div>
+                    <div className="w-px h-8 bg-zinc-800 shrink-0" />
+                    <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">T. Médio Ativo</span>
+                        <span className="text-xl font-mono font-bold text-emerald-500 leading-none">{formatSmartDuration(subSeconds(new Date(), metrics.avgActiveTimeSeconds))}</span>
+                    </div>
                 </div>
             </div>
 
             {/* Main Content Area */}
             <main
                 className="flex-1 p-6 flex flex-col gap-4 overflow-hidden relative"
-                onMouseEnter={() => setIsPaused(true)}
-                onMouseLeave={() => setIsPaused(false)}
             >
                 {error && (
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-red-900/90 text-white px-6 py-3 border border-red-500 shadow-xl flex items-center gap-3">
@@ -243,7 +299,7 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
                                             <p className="text-sm text-zinc-500 font-mono uppercase tracking-wider">Monitoramento em Tempo Real</p>
                                         </div>
                                     </>
-                                ) : (
+                                ) : currentView.type === 'active' ? (
                                     <>
                                         <div className="w-12 h-12 bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
                                             <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -253,6 +309,30 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
                                         <div>
                                             <h2 className="text-2xl font-black text-white uppercase tracking-tight">Atendimentos Ativos</h2>
                                             <p className="text-sm text-zinc-500 font-mono uppercase tracking-wider">Equipe em Operação</p>
+                                        </div>
+                                    </>
+                                ) : currentView.type === 'attendants' ? (
+                                    <>
+                                        <div className="w-12 h-12 bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                                            <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h2 className="text-2xl font-black text-white uppercase tracking-tight">Status dos Atendentes</h2>
+                                            <p className="text-sm text-zinc-500 font-mono uppercase tracking-wider">Visão Geral da Equipe</p>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="w-12 h-12 bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                                            <svg className="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h2 className="text-2xl font-black text-white uppercase tracking-tight">Status por Departamento</h2>
+                                            <p className="text-sm text-zinc-500 font-mono uppercase tracking-wider">Visão Geral da Operação</p>
                                         </div>
                                     </>
                                 )}
@@ -291,6 +371,24 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
                             <ActiveTeamDashboard
                                 columns={currentView.columns}
                                 attendants={attendants}
+                            />
+                        </div>
+                    )}
+
+                    {currentView && currentView.type === 'attendants' && (
+                        <div className="flex-1 industrial-panel overflow-hidden p-1">
+                            <AttendantStatusDashboard
+                                attendants={attendants}
+                                activeContacts={activeContacts}
+                            />
+                        </div>
+                    )}
+
+                    {currentView && currentView.type === 'departments' && (
+                        <div className="flex-1 industrial-panel overflow-hidden p-1">
+                            <DepartmentStatusDashboard
+                                activeContacts={activeContacts}
+                                departmentMap={departmentMap}
                             />
                         </div>
                     )}

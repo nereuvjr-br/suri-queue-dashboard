@@ -6,8 +6,8 @@ const API_URL = import.meta.env.VITE_API_URL || '';
 const API_KEY = import.meta.env.VITE_API_KEY || '';
 
 const DEFAULT_CONFIG: AppConfig = {
-    refreshInterval: 15,
-    slaLimit: 15
+    refreshInterval: Number(import.meta.env.VITE_REFRESH_INTERVAL) || 15,
+    slaLimit: Number(import.meta.env.VITE_SLA_LIMIT) || 15
 };
 
 const DEPARTMENT_NAMES: Record<string, string> = {

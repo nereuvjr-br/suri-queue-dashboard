@@ -5,6 +5,7 @@ type Status = 'online' | 'offline' | 'checking';
 export const useSystemStatus = () => {
     const [portalStatus, setPortalStatus] = useState<Status>('checking');
     const [apiStatus, setApiStatus] = useState<Status>('checking');
+    const [userApiStatus, setUserApiStatus] = useState<Status>('checking');
 
     const checkUrl = async (url: string): Promise<Status> => {
         try {
@@ -20,17 +21,29 @@ export const useSystemStatus = () => {
 
     useEffect(() => {
         const checkAll = async () => {
-            const pStatus = await checkUrl('https://portal.chatbotmaker.io/');
+            const portalUrl = import.meta.env.VITE_PORTAL_URL || 'https://portal.chatbotmaker.io/';
+            const portalApiUrl = import.meta.env.VITE_PORTAL_API_URL || 'https://portal.chatbotmaker.io/api/';
+            const userApiUrl = import.meta.env.VITE_API_URL || '';
+
+            const pStatus = await checkUrl(portalUrl);
             setPortalStatus(pStatus);
 
-            const aStatus = await checkUrl('https://portal.chatbotmaker.io/api/');
+            const aStatus = await checkUrl(portalApiUrl);
             setApiStatus(aStatus);
+
+            if (userApiUrl) {
+                const uStatus = await checkUrl(userApiUrl);
+                setUserApiStatus(uStatus);
+            } else {
+                setUserApiStatus('offline');
+            }
         };
 
         checkAll();
-        const interval = setInterval(checkAll, 30000); // Check every 30 seconds
+        const intervalTime = Number(import.meta.env.VITE_STATUS_CHECK_INTERVAL) || 30000;
+        const interval = setInterval(checkAll, intervalTime);
         return () => clearInterval(interval);
     }, []);
 
-    return { portalStatus, apiStatus };
+    return { portalStatus, apiStatus, userApiStatus };
 };
