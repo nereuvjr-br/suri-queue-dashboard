@@ -5,6 +5,7 @@ import WaitingTable from './WaitingTable';
 import ActiveTeamDashboard from './ActiveTeamDashboard';
 import AttendantStatusDashboard from './AttendantStatusDashboard';
 import DepartmentStatusDashboard from './DepartmentStatusDashboard';
+import ExternalIframeView from './ExternalIframeView';
 import { parseISO, subSeconds, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatSmartDuration, getBusinessMinutes, generateDashboardPages, DashboardColumn } from '../utils';
@@ -28,7 +29,8 @@ type DashboardView =
     | { type: 'waiting'; pageIndex: number; columns: DashboardColumn[] }
     | { type: 'active'; pageIndex: number; columns: DashboardColumn[] }
     | { type: 'attendants'; pageIndex: number; columns: [] }
-    | { type: 'departments'; pageIndex: number; columns: [] };
+    | { type: 'departments'; pageIndex: number; columns: [] }
+    | { type: 'external'; pageIndex: number; columns: []; url: string };
 
 const TvDashboard: React.FC<TvDashboardProps> = ({
     config,
@@ -58,6 +60,15 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
         [activeContacts, departmentMap]
     );
 
+    // Parse external URLs from environment
+    const externalUrls = useMemo(() => {
+        const urlsString = import.meta.env.VITE_EXTERNAL_URLS || '';
+        return urlsString
+            .split(',')
+            .map((url: string) => url.trim())
+            .filter((url: string) => url.length > 0);
+    }, []);
+
     // Flatten into a list of views
     const views: DashboardView[] = useMemo(() => {
         const v: DashboardView[] = [];
@@ -72,8 +83,12 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
             v.push({ type: 'attendants', pageIndex: 0, columns: [] });
             v.push({ type: 'departments', pageIndex: 0, columns: [] });
         }
+        // Add external iframe views
+        externalUrls.forEach((url, index) => {
+            v.push({ type: 'external', pageIndex: index, columns: [], url });
+        });
         return v;
-    }, [waitingPages, activePages, activeContacts.length]);
+    }, [waitingPages, activePages, activeContacts.length, externalUrls]);
 
     // Metrics Calculation
     const metrics = useMemo(() => {
@@ -271,7 +286,7 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
 
             {/* Main Content Area */}
             <main
-                className="flex-1 p-6 flex flex-col gap-4 overflow-hidden relative"
+                className={`flex-1 flex flex-col overflow-hidden relative ${currentView?.type === 'external' ? '' : 'p-6 gap-4'}`}
             >
                 {error && (
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-red-900/90 text-white px-6 py-3 border border-red-500 shadow-xl flex items-center gap-3">
@@ -281,10 +296,10 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
                 )}
 
                 {/* Content Switcher */}
-                <div key={currentViewIndex} className="flex-1 flex flex-col animate-enter overflow-hidden gap-4">
+                <div key={currentViewIndex} className={`flex-1 flex flex-col animate-enter overflow-hidden ${currentView?.type === 'external' ? '' : 'gap-4'}`}>
 
-                    {/* View Description Header */}
-                    {currentView && (
+                    {/* View Description Header - Skip for external views */}
+                    {currentView && currentView.type !== 'external' && (
                         <div className="shrink-0 flex items-center justify-between px-6 py-4 industrial-panel">
                             <div className="flex items-center gap-4">
                                 {currentView.type === 'waiting' ? (
@@ -390,6 +405,12 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
                                 activeContacts={activeContacts}
                                 departmentMap={departmentMap}
                             />
+                        </div>
+                    )}
+
+                    {currentView && currentView.type === 'external' && (
+                        <div className="flex-1 overflow-hidden relative">
+                            <ExternalIframeView url={currentView.url} />
                         </div>
                     )}
 
