@@ -10,16 +10,14 @@ interface ConfigModalProps {
 }
 
 const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onSave, initialConfig, departmentMap }) => {
-  const [url, setUrl] = useState(initialConfig.apiUrl);
-  const [key, setKey] = useState(initialConfig.apiKey);
+
   const [interval, setInterval] = useState(initialConfig.refreshInterval);
   const [sla, setSla] = useState(initialConfig.slaLimit || 15);
   const [showDebug, setShowDebug] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      setUrl(initialConfig.apiUrl);
-      setKey(initialConfig.apiKey);
+
       setInterval(initialConfig.refreshInterval);
       setSla(initialConfig.slaLimit || 15);
     }
@@ -30,8 +28,7 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onSave, initialConfig
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
-      apiUrl: url,
-      apiKey: key,
+
       refreshInterval: interval,
       slaLimit: sla
     });
@@ -46,30 +43,9 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onSave, initialConfig
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">API Base URL</label>
-            <input
-              type="text"
-              required
-              placeholder="https://chatbot-url.com"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-colors"
-            />
-            <p className="text-xs text-gray-500 mt-1">Sem o /api/contacts/list no final.</p>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Bearer Token</label>
-            <input
-              type="password"
-              required
-              placeholder="eyJhbGciOiJIUz..."
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-colors"
-            />
-          </div>
+
+
 
           <div className="grid grid-cols-2 gap-4">
             <div>

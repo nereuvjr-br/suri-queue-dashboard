@@ -31,7 +31,7 @@ export interface SuriSession {
 
 export interface SuriDepartment {
   id: string;
-  Name?: string; 
+  Name?: string;
   name?: string; // API might return lowercase
 }
 
@@ -45,7 +45,7 @@ export interface SuriContact {
   lastActivity: string; // ISO Date
   channelId: string;
   channelType: number;
-  
+
   // Department info
   departmentId?: string; // Queue ID
   defaultDepartmentId: string | null;
@@ -63,8 +63,6 @@ export interface SuriApiResponse<T> {
 // Application State Types
 
 export interface AppConfig {
-  apiUrl: string;
-  apiKey: string;
   refreshInterval: number; // in seconds
   slaLimit: number; // SLA limit in minutes
 }

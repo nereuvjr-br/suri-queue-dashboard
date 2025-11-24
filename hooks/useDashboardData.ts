@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { AppConfig, SuriContact, SuriAttendant } from '../types';
 import { fetchWaitingContacts, fetchActiveContacts, fetchDepartments, fetchAttendants } from '../services/suriService';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+const API_KEY = import.meta.env.VITE_API_KEY || '';
+
 const DEFAULT_CONFIG: AppConfig = {
-    apiUrl: '',
-    apiKey: '',
     refreshInterval: 15,
     slaLimit: 15
 };
@@ -24,23 +25,12 @@ const DEPARTMENT_NAMES: Record<string, string> = {
 export const useDashboardData = () => {
     const [config, setConfig] = useState<AppConfig>(() => {
         const saved = localStorage.getItem('suri_config');
-        const envUrl = import.meta.env.VITE_API_URL;
-        const envKey = import.meta.env.VITE_API_KEY;
-
-        if (envUrl && envKey) {
-            return {
-                ...DEFAULT_CONFIG,
-                apiUrl: envUrl,
-                apiKey: envKey
-            };
-        }
-
         return saved ? JSON.parse(saved) : DEFAULT_CONFIG;
     });
 
     const [isConfigOpen, setIsConfigOpen] = useState(() => {
-        if (import.meta.env.VITE_API_URL && import.meta.env.VITE_API_KEY) return false;
-        return !config.apiUrl || !config.apiKey;
+        if (API_URL && API_KEY) return false;
+        return true;
     });
 
     const [waitingContacts, setWaitingContacts] = useState<SuriContact[]>([]);
@@ -50,9 +40,9 @@ export const useDashboardData = () => {
     const [error, setError] = useState<string | null>(null);
 
     const loadDepartments = useCallback(async () => {
-        if (!config.apiUrl || !config.apiKey) return;
+        if (!API_URL || !API_KEY) return;
         try {
-            const depts = await fetchDepartments(config.apiUrl, config.apiKey);
+            const depts = await fetchDepartments(API_URL, API_KEY);
 
             const newMap: Record<string, string> = { ...DEPARTMENT_NAMES };
             depts.forEach(d => {
@@ -67,10 +57,10 @@ export const useDashboardData = () => {
             console.warn("Could not auto-load departments, using hardcoded map", e);
             setDepartmentMap(DEPARTMENT_NAMES);
         }
-    }, [config.apiUrl, config.apiKey]);
+    }, []);
 
     const fetchData = useCallback(async () => {
-        if (!config.apiUrl || !config.apiKey) return;
+        if (!API_URL || !API_KEY) return;
         setError(null);
         try {
             if (Object.keys(departmentMap).length === 0) {
@@ -78,9 +68,9 @@ export const useDashboardData = () => {
             }
 
             const [waiting, active, agents] = await Promise.all([
-                fetchWaitingContacts(config.apiUrl, config.apiKey),
-                fetchActiveContacts(config.apiUrl, config.apiKey),
-                fetchAttendants(config.apiUrl, config.apiKey)
+                fetchWaitingContacts(API_URL, API_KEY),
+                fetchActiveContacts(API_URL, API_KEY),
+                fetchAttendants(API_URL, API_KEY)
             ]);
             setWaitingContacts(waiting);
             setActiveContacts(active);
@@ -88,7 +78,7 @@ export const useDashboardData = () => {
         } catch (err: any) {
             setError(err.message || "Failed to fetch data");
         }
-    }, [config.apiUrl, config.apiKey, departmentMap, loadDepartments]);
+    }, [departmentMap, loadDepartments]);
 
     useEffect(() => {
         loadDepartments();
