@@ -8,23 +8,32 @@ interface AttendantStatusDashboardProps {
     activeContacts: SuriContact[];
 }
 
+const ALERT_LIMIT_MINUTES = Number(import.meta.env.VITE_AVG_TIME_ALERT_LIMIT) || 30;
+
 const AttendantStatusDashboard: React.FC<AttendantStatusDashboardProps> = ({ attendants, activeContacts }) => {
 
     const attendantStats = useMemo(() => {
         // Count active contacts and calculate duration per attendant
-        const stats = new Map<string, { count: number, totalDuration: number }>();
+        const stats = new Map<string, { count: number, totalDuration: number, longestDuration: number, longestContactName: string }>();
         const now = new Date();
 
         activeContacts.forEach(contact => {
             const agentId = contact.agent?.platformUserId;
             if (agentId) {
-                const current = stats.get(agentId) || { count: 0, totalDuration: 0 };
+                const current = stats.get(agentId) || { count: 0, totalDuration: 0, longestDuration: 0, longestContactName: '' };
                 // Using lastActivity as the reference for duration, consistent with other dashboards
                 const duration = Math.max(0, (now.getTime() - parseISO(contact.lastActivity).getTime()) / 1000);
 
+                if (duration > current.longestDuration) {
+                    current.longestDuration = duration;
+                    current.longestContactName = contact.name;
+                }
+
                 stats.set(agentId, {
                     count: current.count + 1,
-                    totalDuration: current.totalDuration + duration
+                    totalDuration: current.totalDuration + duration,
+                    longestDuration: current.longestDuration,
+                    longestContactName: current.longestContactName
                 });
             }
         });
@@ -37,21 +46,50 @@ const AttendantStatusDashboard: React.FC<AttendantStatusDashboardProps> = ({ att
                 return {
                     ...attendant,
                     activeCount: stat.count,
-                    avgDuration: stat.totalDuration / stat.count
+                    avgDuration: stat.totalDuration / stat.count,
+                    longestDuration: stat.longestDuration,
+                    longestContactName: stat.longestContactName
                 };
             })
-            .sort((a, b) => b.avgDuration - a.avgDuration); // Sort by average duration (highest first)
+            .sort((a, b) => {
+                const limitSeconds = ALERT_LIMIT_MINUTES * 60;
+                const aCritical = a.avgDuration > limitSeconds;
+                const bCritical = b.avgDuration > limitSeconds;
+
+                if (aCritical && !bCritical) return -1;
+                if (!aCritical && bCritical) return 1;
+
+                return b.avgDuration - a.avgDuration;
+            });
     }, [attendants, activeContacts]);
+
+    const getStatusColor = (status: number) => {
+        switch (status) {
+            case 1: return 'bg-emerald-500';
+            case 2: return 'bg-amber-500';
+            default: return 'bg-zinc-500';
+        }
+    };
+
+    const getStatusText = (status: number) => {
+        switch (status) {
+            case 1: return 'Online';
+            case 2: return 'Ocupado';
+            default: return 'Offline';
+        }
+    };
 
     return (
         <div className="h-full overflow-hidden p-2 flex flex-col">
             <div className="grid grid-cols-4 gap-2 content-start">
                 {attendantStats.map((attendant) => (
                     <div key={attendant.id} className="industrial-panel p-2 flex items-center gap-2 relative overflow-hidden group">
-                        {/* Background Pulse for high activity */}
-                        {attendant.activeCount >= 3 && (
-                            <div className="absolute inset-0 bg-blue-500/5 animate-pulse" />
-                        )}
+                        {/* Alert Background Pulse */}
+                        {attendant.avgDuration > ALERT_LIMIT_MINUTES * 60 ? (
+                            <div className="absolute inset-0 bg-red-500/20 animate-pulse z-0" />
+                        ) : attendant.activeCount >= 3 ? (
+                            <div className="absolute inset-0 bg-blue-500/5 animate-pulse z-0" />
+                        ) : null}
 
                         {/* Avatar */}
                         <div className="relative shrink-0">
@@ -73,21 +111,43 @@ const AttendantStatusDashboard: React.FC<AttendantStatusDashboardProps> = ({ att
                         </div>
 
                         {/* Info */}
-                        <div className="flex-1 min-w-0 z-10">
-                            <h3 className="text-base font-bold text-white truncate leading-tight" title={attendant.name}>
-                                {attendant.name}
-                            </h3>
-                            <div className="flex flex-col gap-1 mt-1">
+                        <div className="flex-1 min-w-0 z-10 flex flex-col h-full justify-between py-1">
+                            <div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Atendimentos</span>
-                                    <span className="text-lg font-mono font-bold text-blue-500 leading-none">
+                                    <h3 className="text-base font-bold text-white truncate leading-tight" title={attendant.name}>
+                                        {attendant.name}
+                                    </h3>
+                                    <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full text-zinc-950 ${getStatusColor(attendant.status)}`}>
+                                        {getStatusText(attendant.status)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2 mt-2 bg-zinc-950/30 p-2 rounded border border-zinc-800/50">
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Ativos</span>
+                                    <span className="text-lg font-mono font-bold text-white leading-none">
                                         {attendant.activeCount}
                                     </span>
                                 </div>
-                                <div className="flex items-center justify-between border-t border-zinc-800 pt-1">
-                                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">T. Médio</span>
-                                    <span className="text-xs font-mono font-bold text-emerald-500 leading-none">
+                                <div className="flex flex-col items-center border-l border-zinc-800">
+                                    <span className={`text-[9px] font-bold uppercase tracking-wider ${attendant.avgDuration > ALERT_LIMIT_MINUTES * 60 ? 'text-red-500' : 'text-zinc-500'}`}>Médio</span>
+                                    <span className={`text-sm font-mono font-bold leading-none ${attendant.avgDuration > ALERT_LIMIT_MINUTES * 60 ? 'text-red-500 animate-pulse' : 'text-emerald-500'}`}>
                                         {formatSmartDuration(subSeconds(new Date(), attendant.avgDuration))}
+                                    </span>
+                                </div>
+                                <div className="flex flex-col items-center border-l border-zinc-800 relative group/tooltip">
+                                    <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Maior</span>
+                                    <span className="text-sm font-mono font-bold text-amber-500 leading-none">
+                                        {formatSmartDuration(subSeconds(new Date(), attendant.longestDuration))}
+                                    </span>
+                                    {/* Tooltip for Longest Contact Name */}
+                                    <div className="absolute bottom-full mb-2 right-0 bg-zinc-900 text-white text-[10px] px-2 py-1 rounded border border-zinc-700 whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity z-50 pointer-events-none">
+                                        {attendant.longestContactName}
+                                    </div>
+                                    {/* Inline Name for TV visibility */}
+                                    <span className="text-[8px] text-zinc-600 truncate max-w-[60px] mt-0.5">
+                                        {attendant.longestContactName.split(' ')[0]}
                                     </span>
                                 </div>
                             </div>
