@@ -178,12 +178,12 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
                     </div>
                     <div>
                         <h1 className="text-2xl font-black tracking-tighter text-white uppercase industrial-gradient-text">
-                            SURI <span className="text-zinc-500">|</span> KOERNER
+                            Koerner
                         </h1>
                         <div className="flex items-center gap-3 text-zinc-500 text-xs font-bold uppercase tracking-widest mt-0.5">
                             <span>Queue Management System</span>
                             <span className="w-1 h-1 rounded-full bg-zinc-700" />
-                            <span>v2.0.4</span>
+                            <span>v1.0.1</span>
                         </div>
                     </div>
                 </div>
