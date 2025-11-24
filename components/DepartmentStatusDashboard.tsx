@@ -36,10 +36,10 @@ const DepartmentStatusDashboard: React.FC<DepartmentStatusDashboardProps> = ({ a
     }, [activeContacts, departmentMap]);
 
     return (
-        <div className="h-full overflow-hidden p-4 flex flex-col">
-            <div className="grid grid-cols-4 gap-4 content-start">
+        <div className="h-full overflow-hidden p-2 flex flex-col">
+            <div className="grid grid-cols-4 gap-2 content-start">
                 {departmentStats.map((dept) => (
-                    <div key={dept.id} className="industrial-panel p-4 flex items-center gap-4 relative overflow-hidden group">
+                    <div key={dept.id} className="industrial-panel p-2 flex items-center gap-2 relative overflow-hidden group">
                         {/* Background Pulse for high activity */}
                         {dept.activeCount >= 5 && (
                             <div className="absolute inset-0 bg-purple-500/5 animate-pulse" />
@@ -47,14 +47,14 @@ const DepartmentStatusDashboard: React.FC<DepartmentStatusDashboardProps> = ({ a
 
                         {/* Icon Placeholder or Initials */}
                         <div className="relative shrink-0">
-                            <div className="w-16 h-16 rounded bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center text-2xl font-bold text-zinc-500 shadow-lg">
+                            <div className="w-12 h-12 rounded bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center text-xl font-bold text-zinc-500 shadow-lg">
                                 {dept.name.substring(0, 2).toUpperCase()}
                             </div>
                         </div>
 
                         {/* Info */}
                         <div className="flex-1 min-w-0 z-10">
-                            <h3 className="text-lg font-bold text-white truncate leading-tight" title={dept.name}>
+                            <h3 className="text-base font-bold text-white truncate leading-tight" title={dept.name}>
                                 {dept.name}
                             </h3>
                             <div className="flex flex-col gap-1 mt-1">

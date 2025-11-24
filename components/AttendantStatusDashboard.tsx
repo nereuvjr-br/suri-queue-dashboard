@@ -44,10 +44,10 @@ const AttendantStatusDashboard: React.FC<AttendantStatusDashboardProps> = ({ att
     }, [attendants, activeContacts]);
 
     return (
-        <div className="h-full overflow-hidden p-4 flex flex-col">
-            <div className="grid grid-cols-4 gap-4 content-start">
+        <div className="h-full overflow-hidden p-2 flex flex-col">
+            <div className="grid grid-cols-4 gap-2 content-start">
                 {attendantStats.map((attendant) => (
-                    <div key={attendant.id} className="industrial-panel p-4 flex items-center gap-4 relative overflow-hidden group">
+                    <div key={attendant.id} className="industrial-panel p-2 flex items-center gap-2 relative overflow-hidden group">
                         {/* Background Pulse for high activity */}
                         {attendant.activeCount >= 3 && (
                             <div className="absolute inset-0 bg-blue-500/5 animate-pulse" />
@@ -59,22 +59,22 @@ const AttendantStatusDashboard: React.FC<AttendantStatusDashboardProps> = ({ att
                                 <img
                                     src={attendant.profilePicture.url}
                                     alt={attendant.name}
-                                    className="w-16 h-16 rounded object-cover border-2 border-zinc-700 shadow-lg"
+                                    className="w-12 h-12 rounded object-cover border-2 border-zinc-700 shadow-lg"
                                 />
                             ) : (
-                                <div className="w-16 h-16 rounded bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center text-xl font-bold text-zinc-500 shadow-lg">
+                                <div className="w-12 h-12 rounded bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center text-lg font-bold text-zinc-500 shadow-lg">
                                     {attendant.name.charAt(0).toUpperCase()}
                                 </div>
                             )}
                             {/* Status Dot */}
                             <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-zinc-900 ${attendant.status === 1 ? 'bg-emerald-500' :
-                                    attendant.status === 2 ? 'bg-amber-500' : 'bg-zinc-500'
+                                attendant.status === 2 ? 'bg-amber-500' : 'bg-zinc-500'
                                 }`} />
                         </div>
 
                         {/* Info */}
                         <div className="flex-1 min-w-0 z-10">
-                            <h3 className="text-lg font-bold text-white truncate leading-tight" title={attendant.name}>
+                            <h3 className="text-base font-bold text-white truncate leading-tight" title={attendant.name}>
                                 {attendant.name}
                             </h3>
                             <div className="flex flex-col gap-1 mt-1">

@@ -10,15 +10,15 @@ interface WaitingTableProps {
 
 const WaitingTable: React.FC<WaitingTableProps> = ({ columns, slaLimit = 15 }) => {
   return (
-    <div className="h-full overflow-hidden p-4 flex flex-col">
-      <div className="grid grid-cols-5 gap-4 h-full">
+    <div className="h-full overflow-hidden p-2 flex flex-col">
+      <div className="grid grid-cols-5 gap-2 h-full">
         {columns.map((column) => (
-          <div key={column.id} className="flex flex-col gap-3 bg-zinc-900/50 rounded-sm p-4 border border-zinc-800 h-full shadow-inner overflow-hidden">
+          <div key={column.id} className="flex flex-col gap-2 bg-zinc-900/50 rounded-sm p-2 border border-zinc-800 h-full shadow-inner overflow-hidden">
             {/* Column Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-800 shrink-0">
-              <div className="flex items-center gap-3 overflow-hidden">
-                <div className="w-1 h-4 bg-blue-500 shrink-0" />
-                <h3 className="font-bold text-sm text-zinc-300 uppercase tracking-wider truncate" title={column.title}>{column.title}</h3>
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-800 shrink-0">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div className="w-1 h-3 bg-blue-500 shrink-0" />
+                <h3 className="font-bold text-xs text-zinc-300 uppercase tracking-wider truncate" title={column.title}>{column.title}</h3>
               </div>
               <span className="bg-zinc-800 text-zinc-400 text-xs font-mono font-bold px-2 py-0.5 border border-zinc-700">
                 {column.contacts.length.toString().padStart(2, '0')}
@@ -49,7 +49,7 @@ const WaitingTable: React.FC<WaitingTableProps> = ({ columns, slaLimit = 15 }) =
                     return (
                       <div
                         key={contact.id}
-                        className={`relative p-3 border-l-2 transition-all hover:bg-zinc-800 shrink-0 group ${isSlaBreached
+                        className={`relative p-2 border-l-2 transition-all hover:bg-zinc-800 shrink-0 group ${isSlaBreached
                           ? 'bg-red-900/10 border-l-red-500 border-y border-r border-zinc-800'
                           : 'bg-zinc-900 border-l-zinc-600 border-y border-r border-zinc-800'
                           }`}
@@ -90,7 +90,7 @@ const WaitingTable: React.FC<WaitingTableProps> = ({ columns, slaLimit = 15 }) =
 
                             <div className="flex flex-col items-end">
                               <span className="text-[9px] uppercase tracking-wider font-bold text-zinc-600 mb-0.5">Espera</span>
-                              <div className={`text-lg font-mono font-bold leading-none tracking-tight ${isSlaBreached ? 'text-red-500 animate-pulse' : 'text-zinc-300'
+                              <div className={`text-base font-mono font-bold leading-none tracking-tight ${isSlaBreached ? 'text-red-500 animate-pulse' : 'text-zinc-300'
                                 }`}>
                                 {formatSmartDuration(waitTime)}
                               </div>
