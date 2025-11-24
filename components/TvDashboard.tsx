@@ -6,6 +6,7 @@ import ActiveTeamDashboard from './ActiveTeamDashboard';
 import { parseISO, subSeconds, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatSmartDuration, getBusinessMinutes, generateDashboardPages, DashboardColumn } from '../utils';
+import { useSystemStatus } from '../hooks/useSystemStatus';
 
 interface TvDashboardProps {
     config: AppConfig;
@@ -41,7 +42,9 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
     const [isPaused, setIsPaused] = useState(false);
     const [progressKey, setProgressKey] = useState(0);
 
-    // Generate pages
+    const { portalStatus, apiStatus } = useSystemStatus();
+
+    // ... (rest of the component logic)
     const waitingPages = useMemo(() =>
         generateDashboardPages(waitingContacts, departmentMap),
         [waitingContacts, departmentMap]
@@ -111,128 +114,145 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
     const currentView = views[currentViewIndex % views.length] || views[0];
 
     return (
-        <div className="min-h-screen text-white font-sans flex flex-col relative overflow-hidden selection:bg-indigo-500 selection:text-white">
-            {/* Background Elements */}
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-                <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px]" />
-                <div className="absolute bottom-[-10%] left-[-5%] w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[120px]" />
-            </div>
+        <div className="min-h-screen bg-zinc-950 text-zinc-200 font-sans flex flex-col relative overflow-hidden selection:bg-blue-500 selection:text-white scanline">
 
             {/* Header */}
-            <header className="h-24 shrink-0 glass-header px-8 flex items-center justify-between z-20 relative shadow-2xl">
+            <header className="h-20 shrink-0 industrial-header px-8 flex items-center justify-between z-20 relative">
                 {/* Progress Bar */}
                 {!isPaused && !isConfigOpen && (
-                    <div className="absolute bottom-0 left-0 h-0.5 bg-indigo-500/50 w-full">
+                    <div className="absolute bottom-0 left-0 h-1 bg-zinc-800 w-full">
                         <div
                             key={progressKey}
-                            className="h-full bg-gradient-to-r from-indigo-400 to-purple-400 animate-progress"
+                            className="h-full bg-blue-500 animate-progress origin-left"
                             style={{ animationDuration: `${VIEW_DURATION}ms` }}
                         />
                     </div>
                 )}
 
                 <div className="flex items-center gap-6">
-                    <div className="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
-                        <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    <div className="w-10 h-10 rounded bg-zinc-800 flex items-center justify-center border border-zinc-700 shadow-inner">
+                        <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
                     </div>
                     <div>
-                        <h1 className="text-3xl font-black tracking-tight text-white drop-shadow-md">
-                            SURI
+                        <h1 className="text-2xl font-black tracking-tighter text-white uppercase industrial-gradient-text">
+                            SURI <span className="text-zinc-500">|</span> KOERNER
                         </h1>
-                        <div className="flex items-center gap-3 text-gray-400 text-sm font-medium mt-0.5">
-                            <span className="uppercase tracking-wider text-xs font-bold">Queue Dashboard</span>
-                            <span className="w-1 h-1 rounded-full bg-gray-600" />
-                            <span>{format(currentTime, "EEEE, d 'de' MMMM", { locale: ptBR })}</span>
-                            <span className="w-1 h-1 rounded-full bg-gray-600" />
-                            <span className="font-mono text-gray-300">{format(currentTime, 'HH:mm')}</span>
+                        <div className="flex items-center gap-3 text-zinc-500 text-xs font-bold uppercase tracking-widest mt-0.5">
+                            <span>Queue Management System</span>
+                            <span className="w-1 h-1 rounded-full bg-zinc-700" />
+                            <span>v2.0.4</span>
                         </div>
                     </div>
                 </div>
 
-                {/* Global Stats */}
-                <div className="flex items-center gap-8">
-                    <div className="flex flex-col items-end">
-                        <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider mb-0.5">Em Espera</span>
-                        <span className="text-4xl font-black text-white leading-none drop-shadow-lg">{metrics.totalWaiting}</span>
+                {/* Clock & Date */}
+                <div className="flex items-center gap-6 bg-zinc-900/50 px-6 py-2 rounded border border-zinc-800">
+                    <div className="text-right">
+                        <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider">{format(currentTime, "EEEE, d 'de' MMMM", { locale: ptBR })}</div>
+                        <div className="text-2xl font-mono font-bold text-white leading-none tracking-tight">{format(currentTime, 'HH:mm:ss')}</div>
                     </div>
-                    <div className="w-px h-10 bg-white/10" />
-                    <div className="flex flex-col items-end">
-                        <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider mb-0.5">Ativos</span>
-                        <span className="text-4xl font-black text-white leading-none drop-shadow-lg">{metrics.activeContacts.length}</span>
+                </div>
+
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setIsConfigOpen(true)}
+                        className="p-2 text-zinc-600 hover:text-white transition-colors border border-transparent hover:border-zinc-700 rounded"
+                    >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    </button>
+                </div>
+            </header>
+
+            {/* Status Strip */}
+            <div className="h-16 bg-zinc-900 border-b border-zinc-800 flex items-center px-8 gap-8 overflow-x-auto custom-scrollbar">
+                <div className="flex items-center gap-6 shrink-0">
+                    <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${portalStatus === 'online' ? 'bg-emerald-500' : 'bg-red-500'} animate-pulse`} />
+                        <span className={`text-[10px] font-bold uppercase tracking-widest ${portalStatus === 'online' ? 'text-emerald-500' : 'text-red-500'}`}>Suri Portal</span>
                     </div>
-                    <div className="w-px h-10 bg-white/10" />
-                    <div className="flex flex-col items-end">
-                        <span className="text-xs font-bold text-amber-300 uppercase tracking-wider mb-0.5">T. Médio</span>
-                        <span className="text-4xl font-black text-white leading-none drop-shadow-lg">{formatSmartDuration(subSeconds(new Date(), metrics.avgWaitTimeSeconds))}</span>
+                    <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${apiStatus === 'online' ? 'bg-emerald-500' : 'bg-red-500'} animate-pulse`} />
+                        <span className={`text-[10px] font-bold uppercase tracking-widest ${apiStatus === 'online' ? 'text-emerald-500' : 'text-red-500'}`}>Suri API</span>
                     </div>
-                    <div className="w-px h-10 bg-white/10" />
+                </div>
+                <div className="w-px h-8 bg-zinc-800 shrink-0" />
+
+                <div className="flex gap-8 flex-1 justify-end">
                     <div className="flex flex-col items-end">
-                        <span className="text-xs font-bold text-orange-300 uppercase tracking-wider mb-0.5">Max Espera</span>
-                        <span className={`text-4xl font-black leading-none drop-shadow-lg ${metrics.longestWaitTimeSeconds > 600 ? 'text-orange-400' : 'text-white'}`}>
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Em Espera</span>
+                        <span className="text-xl font-mono font-bold text-white leading-none">{metrics.totalWaiting}</span>
+                    </div>
+                    <div className="w-px h-8 bg-zinc-800 shrink-0" />
+                    <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Ativos</span>
+                        <span className="text-xl font-mono font-bold text-white leading-none">{metrics.activeContacts.length}</span>
+                    </div>
+                    <div className="w-px h-8 bg-zinc-800 shrink-0" />
+                    <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">T. Médio</span>
+                        <span className="text-xl font-mono font-bold text-white leading-none">{formatSmartDuration(subSeconds(new Date(), metrics.avgWaitTimeSeconds))}</span>
+                    </div>
+                    <div className="w-px h-8 bg-zinc-800 shrink-0" />
+                    <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Max Espera</span>
+                        <span className={`text-xl font-mono font-bold leading-none ${metrics.longestWaitTimeSeconds > 600 ? 'text-amber-500' : 'text-white'}`}>
                             {formatSmartDuration(subSeconds(new Date(), metrics.longestWaitTimeSeconds))}
                         </span>
                     </div>
-                    <div className="w-px h-10 bg-white/10" />
+                    <div className="w-px h-8 bg-zinc-800 shrink-0" />
                     <div className="flex flex-col items-end">
-                        <span className="text-xs font-bold text-rose-300 uppercase tracking-wider mb-0.5">SLA Crítico</span>
-                        <span className={`text-4xl font-black leading-none drop-shadow-lg ${metrics.slaBreachedCount > 0 ? 'text-rose-400 animate-pulse' : 'text-white'}`}>
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">SLA Crítico</span>
+                        <span className={`text-xl font-mono font-bold leading-none ${metrics.slaBreachedCount > 0 ? 'text-red-500 animate-pulse' : 'text-zinc-600'}`}>
                             {metrics.slaBreachedCount}
                         </span>
                     </div>
                 </div>
-
-                <button
-                    onClick={() => setIsConfigOpen(true)}
-                    className="p-1.5 text-white/20 hover:text-white transition-colors"
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                </button>
-            </header>
+            </div>
 
             {/* Main Content Area */}
             <main
-                className="flex-1 p-2 flex flex-col gap-2 overflow-hidden relative"
+                className="flex-1 p-6 flex flex-col gap-4 overflow-hidden relative"
                 onMouseEnter={() => setIsPaused(true)}
                 onMouseLeave={() => setIsPaused(false)}
             >
                 {error && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-rose-500/90 text-white px-6 py-3 rounded-full shadow-xl backdrop-blur-md flex items-center gap-3 animate-bounce">
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        <span className="font-bold">{error}</span>
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-red-900/90 text-white px-6 py-3 border border-red-500 shadow-xl flex items-center gap-3">
+                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span className="font-mono font-bold uppercase">{error}</span>
                     </div>
                 )}
 
                 {/* Content Switcher */}
-                <div key={currentViewIndex} className="flex-1 flex flex-col animate-enter overflow-hidden gap-3">
+                <div key={currentViewIndex} className="flex-1 flex flex-col animate-enter overflow-hidden gap-4">
 
                     {/* View Description Header */}
                     {currentView && (
-                        <div className="shrink-0 flex items-center justify-between px-6 py-3 glass-panel rounded-xl border border-white/10">
+                        <div className="shrink-0 flex items-center justify-between px-6 py-4 industrial-panel">
                             <div className="flex items-center gap-4">
                                 {currentView.type === 'waiting' ? (
                                     <>
-                                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
-                                            <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        <div className="w-12 h-12 bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                                            <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
                                         </div>
                                         <div>
-                                            <h2 className="text-xl font-black text-white tracking-tight">Fila de Espera</h2>
-                                            <p className="text-sm text-gray-400 mt-0.5">Clientes aguardando atendimento por departamento</p>
+                                            <h2 className="text-2xl font-black text-white uppercase tracking-tight">Fila de Espera</h2>
+                                            <p className="text-sm text-zinc-500 font-mono uppercase tracking-wider">Monitoramento em Tempo Real</p>
                                         </div>
                                     </>
                                 ) : (
                                     <>
-                                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
-                                            <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        <div className="w-12 h-12 bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                                            <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                             </svg>
                                         </div>
                                         <div>
-                                            <h2 className="text-xl font-black text-white tracking-tight">Atendimentos Ativos</h2>
-                                            <p className="text-sm text-gray-400 mt-0.5">Clientes sendo atendidos no momento por departamento</p>
+                                            <h2 className="text-2xl font-black text-white uppercase tracking-tight">Atendimentos Ativos</h2>
+                                            <p className="text-sm text-zinc-500 font-mono uppercase tracking-wider">Equipe em Operação</p>
                                         </div>
                                     </>
                                 )}
@@ -241,22 +261,24 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
                             {/* Page Indicator */}
                             {((currentView.type === 'waiting' && waitingPages.length > 1) ||
                                 (currentView.type === 'active' && activePages.length > 1)) && (
-                                    <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-lg border border-white/10">
-                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Página</span>
-                                        <span className="text-lg font-black text-white">
-                                            {currentView.pageIndex + 1}
-                                        </span>
-                                        <span className="text-gray-500">/</span>
-                                        <span className="text-lg font-bold text-gray-400">
-                                            {currentView.type === 'waiting' ? waitingPages.length : activePages.length}
-                                        </span>
+                                    <div className="flex items-center gap-3 bg-zinc-900 px-4 py-2 border border-zinc-800">
+                                        <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Página</span>
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-2xl font-mono font-bold text-white">
+                                                {currentView.pageIndex + 1}
+                                            </span>
+                                            <span className="text-zinc-600">/</span>
+                                            <span className="text-lg font-mono font-bold text-zinc-600">
+                                                {currentView.type === 'waiting' ? waitingPages.length : activePages.length}
+                                            </span>
+                                        </div>
                                     </div>
                                 )}
                         </div>
                     )}
 
                     {currentView && currentView.type === 'waiting' && (
-                        <div className="flex-1 glass-panel rounded-2xl overflow-hidden p-1">
+                        <div className="flex-1 industrial-panel overflow-hidden p-1">
                             <WaitingTable
                                 columns={currentView.columns}
                                 slaLimit={config.slaLimit}
@@ -265,7 +287,7 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
                     )}
 
                     {currentView && currentView.type === 'active' && (
-                        <div className="flex-1 glass-panel rounded-2xl overflow-hidden p-1">
+                        <div className="flex-1 industrial-panel overflow-hidden p-1">
                             <ActiveTeamDashboard
                                 columns={currentView.columns}
                                 attendants={attendants}
@@ -278,8 +300,8 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
 
             {/* Pause Indicator */}
             {isPaused && (
-                <div className="absolute bottom-8 right-8 bg-black/50 backdrop-blur text-white px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
+                <div className="absolute bottom-8 right-8 bg-zinc-900 border border-zinc-700 text-white px-4 py-2 text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-xl">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
                     Rotação Pausada
                 </div>
             )}
