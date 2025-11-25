@@ -87,6 +87,13 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
 
                 <div className="flex items-center gap-2">
                     <button
+                        onClick={() => window.location.href = '/'}
+                        className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors rounded"
+                        title="Voltar para TV"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    <button
                         onClick={logout}
                         className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-800 transition-colors rounded"
                         title="Sair"
