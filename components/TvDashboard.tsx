@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AppConfig, SuriContact, SuriAttendant } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 import WaitingTable from './WaitingTable';
 import ActiveTeamDashboard from './ActiveTeamDashboard';
@@ -43,6 +44,7 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
     error,
     onSaveConfig
 }) => {
+    const { logout } = useAuth();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [currentViewIndex, setCurrentViewIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
@@ -216,6 +218,13 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
                             title="Próxima Tela"
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </button>
+                        <button
+                            onClick={logout}
+                            className="p-2 text-zinc-400 hover:text-red-500 hover:bg-zinc-800 transition-colors rounded"
+                            title="Sair do Sistema"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                         </button>
                     </div>
 

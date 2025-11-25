@@ -3,6 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useDashboardData } from './hooks/useDashboardData';
 import TvDashboard from './components/TvDashboard';
 import AttendantView from './components/AttendantView';
+import { AuthProvider } from './contexts/AuthContext';
+import Login from './components/Login';
+import ProtectedRoute from './components/ProtectedRoute';
 
 const App: React.FC = () => {
   const {
@@ -19,41 +22,49 @@ const App: React.FC = () => {
 
   return (
     <BrowserRouter>
-      <Routes>
-        {/* TV Dashboard (Default Route) */}
-        <Route
-          path="/"
-          element={
-            <TvDashboard
-              config={config}
-              isConfigOpen={isConfigOpen}
-              setIsConfigOpen={setIsConfigOpen}
-              waitingContacts={waitingContacts}
-              activeContacts={activeContacts}
-              attendants={attendants}
-              departmentMap={departmentMap}
-              error={error}
-              onSaveConfig={handleSaveConfig}
-            />
-          }
-        />
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
 
-        {/* Attendant Console */}
-        <Route
-          path="/attendant"
-          element={
-            <AttendantView
-              waitingContacts={waitingContacts}
-              activeContacts={activeContacts}
-              attendants={attendants}
-              departmentMap={departmentMap}
-            />
-          }
-        />
+          {/* TV Dashboard (Default Route) */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <TvDashboard
+                  config={config}
+                  isConfigOpen={isConfigOpen}
+                  setIsConfigOpen={setIsConfigOpen}
+                  waitingContacts={waitingContacts}
+                  activeContacts={activeContacts}
+                  attendants={attendants}
+                  departmentMap={departmentMap}
+                  error={error}
+                  onSaveConfig={handleSaveConfig}
+                />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* Attendant Console */}
+          <Route
+            path="/attendant"
+            element={
+              <ProtectedRoute>
+                <AttendantView
+                  waitingContacts={waitingContacts}
+                  activeContacts={activeContacts}
+                  attendants={attendants}
+                  departmentMap={departmentMap}
+                />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 };
