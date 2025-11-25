@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppConfig, SuriContact, SuriAttendant } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import PcWaitingTable from './PcWaitingTable';
@@ -23,6 +24,7 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
     departmentMap,
 }) => {
     const { logout } = useAuth();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'waiting' | 'active' | 'attendants' | 'departments'>('waiting');
 
     // Generate columns for Waiting View (No pagination, high limits)
@@ -87,7 +89,7 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
 
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={() => window.location.href = '/'}
+                        onClick={() => navigate('/')}
                         className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors rounded"
                         title="Voltar para TV"
                     >
