@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useDashboardData } from './hooks/useDashboardData';
 import TvDashboard from './components/TvDashboard';
 import AttendantView from './components/AttendantView';
+import PcDashboard from './components/PcDashboard';
 import { AuthProvider } from './contexts/AuthContext';
 import Login from './components/Login';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -52,6 +53,22 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute>
                 <AttendantView
+                  waitingContacts={waitingContacts}
+                  activeContacts={activeContacts}
+                  attendants={attendants}
+                  departmentMap={departmentMap}
+                />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* PC Dashboard */}
+          <Route
+            path="/pc"
+            element={
+              <ProtectedRoute>
+                <PcDashboard
+                  config={config}
                   waitingContacts={waitingContacts}
                   activeContacts={activeContacts}
                   attendants={attendants}
