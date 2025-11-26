@@ -106,7 +106,7 @@ export const getSlaStatus = (contact: SuriContact, slaLimit: number): SlaStatus 
         formattedTime = `${minutesRemaining}m`;
     }
 
-    const percentage = Math.min(100, Math.max(0, (minutesWaiting / slaLimit) * 100));
+    const percentage = Math.max(0, (minutesWaiting / slaLimit) * 100);
 
     return {
         isOverdue,
