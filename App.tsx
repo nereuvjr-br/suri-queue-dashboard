@@ -8,6 +8,20 @@ import { AuthProvider } from './contexts/AuthContext';
 import Login from './components/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 
+/**
+ * @component App
+ * O componente raiz da aplicação.
+ *
+ * Responsabilidades:
+ * - Inicializa o provedor de autenticação (`AuthProvider`).
+ * - Configura o roteamento (`BrowserRouter`, `Routes`, `Route`) para as diferentes
+ *   visualizações do dashboard (TV, PC, Atendente).
+ * - Utiliza o hook `useDashboardData` para buscar e gerenciar todos os dados
+ *   da aplicação e os distribui para os componentes filhos.
+ * - Protege as rotas principais para que exijam autenticação.
+ *
+ * @returns O componente da aplicação com as rotas configuradas.
+ */
 const App: React.FC = () => {
   const {
     config,
@@ -27,7 +41,7 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/login" element={<Login />} />
 
-          {/* TV Dashboard (Default Route) */}
+          {/* Rota do TV Dashboard (Rota Padrão) */}
           <Route
             path="/"
             element={
@@ -47,7 +61,7 @@ const App: React.FC = () => {
             }
           />
 
-          {/* Attendant Console */}
+          {/* Rota do Console do Atendente */}
           <Route
             path="/attendant"
             element={
@@ -62,7 +76,7 @@ const App: React.FC = () => {
             }
           />
 
-          {/* PC Dashboard */}
+          {/* Rota do PC Dashboard */}
           <Route
             path="/pc"
             element={
@@ -81,7 +95,7 @@ const App: React.FC = () => {
             }
           />
 
-          {/* Fallback */}
+          {/* Rota de Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

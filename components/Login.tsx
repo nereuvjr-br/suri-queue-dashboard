@@ -2,6 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
+/**
+ * @component Login
+ * Um componente de página de login que fornece um formulário para o usuário inserir uma senha.
+ * Ele usa o `AuthContext` para verificar a senha e, em caso de sucesso, redireciona o usuário
+ * para a página de onde ele veio ou para a página inicial.
+ *
+ * @returns A página de login renderizada.
+ */
 const Login: React.FC = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -11,6 +19,10 @@ const Login: React.FC = () => {
 
     const from = location.state?.from?.pathname || '/';
 
+    /**
+     * Manipula o envio do formulário de login.
+     * @param {React.FormEvent} e - O evento de envio do formulário.
+     */
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (login(password)) {

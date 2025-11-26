@@ -1,15 +1,36 @@
 import React from 'react';
 
+/**
+ * @interface MetricCardProps
+ * Propriedades para o componente MetricCard.
+ */
 interface MetricCardProps {
+  /** O título principal do card, exibido no topo. */
   title: string;
+  /** O valor da métrica a ser exibido em destaque. */
   value: string | number;
+  /** Um subtítulo ou informação adicional, exibido na parte inferior. */
   subtitle?: string;
+  /** Um ícone opcional a ser exibido como marca d'água no fundo. */
   icon?: React.ReactNode;
+  /** O esquema de cores do card. */
   color?: 'blue' | 'green' | 'red' | 'yellow' | 'indigo';
 }
 
+/**
+ * @component MetricCard
+ * Um componente de card reutilizável para exibir uma única métrica de forma destacada.
+ * Ele inclui um título, um valor principal, um subtítulo opcional e um ícone de fundo.
+ *
+ * @param {MetricCardProps} props - As propriedades para configurar o card.
+ * @returns Um card de métrica estilizado.
+ */
 const MetricCard: React.FC<MetricCardProps> = ({ title, value, subtitle, icon, color = 'blue' }) => {
 
+  /**
+   * Retorna as classes CSS correspondentes ao esquema de cores selecionado.
+   * @returns {string} Uma string de classes de Tailwind CSS.
+   */
   const getColorClasses = () => {
     switch (color) {
       case 'red': return 'text-rose-400 from-rose-500/20 to-rose-900/20 border-rose-500/30';
@@ -22,7 +43,7 @@ const MetricCard: React.FC<MetricCardProps> = ({ title, value, subtitle, icon, c
   return (
     <div className={`glass-card relative overflow-hidden rounded-3xl p-6 border bg-gradient-to-br ${getColorClasses()} flex flex-col justify-between h-40 group`}>
 
-      {/* Watermark Icon */}
+      {/* Ícone de Marca D'água */}
       <div className="absolute -right-6 -bottom-6 opacity-10 scale-150 transition-transform group-hover:scale-125 group-hover:opacity-20 text-current">
         {icon}
       </div>

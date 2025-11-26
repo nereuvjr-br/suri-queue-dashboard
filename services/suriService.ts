@@ -1,8 +1,18 @@
 import { SuriApiResponse, SuriContact, SuriDepartment, SuriAttendant } from '../types';
 
-// Helper to clean URL
+/**
+ * Remove a barra final de uma URL, se houver.
+ * @param baseUrl - A URL base a ser limpa.
+ * @returns A URL sem a barra final.
+ */
 const getCleanUrl = (baseUrl: string) => baseUrl.replace(/\/$/, "");
 
+/**
+ * Busca a lista de departamentos da API do Suri.
+ * @param baseUrl - A URL base da API do Suri.
+ * @param token - O token de autorização para a API.
+ * @returns Uma promessa que resolve para uma lista de departamentos.
+ */
 export const fetchDepartments = async (
   baseUrl: string,
   token: string
@@ -19,30 +29,36 @@ export const fetchDepartments = async (
     });
 
     if (!response.ok) {
-      console.warn(`Department fetch failed: ${response.status}`);
+      console.warn(`A busca por departamentos falhou: ${response.status}`);
       return [];
     }
 
     const json: SuriApiResponse<SuriDepartment[]> = await response.json();
 
     if (!json.success) {
-      console.warn("API returned success: false for departments", json.error);
+      console.warn("A API retornou sucesso: falso para departamentos", json.error);
       return [];
     }
 
     return json.data || [];
   } catch (error) {
-    console.error("Error fetching departments:", error);
+    console.error("Erro ao buscar departamentos:", error);
     return [];
   }
 };
 
+/**
+ * Busca a lista de atendentes da API do Suri.
+ * @param baseUrl - A URL base da API do Suri.
+ * @param token - O token de autorização para a API.
+ * @returns Uma promessa que resolve para uma lista de atendentes.
+ */
 export const fetchAttendants = async (
   baseUrl: string,
   token: string
 ): Promise<SuriAttendant[]> => {
   const endpoint = `${getCleanUrl(baseUrl)}/api/attendants`;
-  // Note: Some versions might use /api/agents. Adjust if necessary.
+  // Nota: Algumas versões podem usar /api/agents. Ajuste se necessário.
 
   try {
     const response = await fetch(endpoint, {
@@ -54,26 +70,33 @@ export const fetchAttendants = async (
     });
 
     if (!response.ok) {
-      console.warn(`Attendants fetch failed: ${response.status}`);
+      console.warn(`A busca por atendentes falhou: ${response.status}`);
       return [];
     }
 
     const json: SuriApiResponse<SuriAttendant[]> = await response.json();
 
     if (!json.success) {
-      // Fallback: if api/attendants fails, return empty so app doesn't crash
-      console.warn("API returned success: false for attendants", json.error);
+      // Fallback: se api/attendants falhar, retorna vazio para não quebrar o app
+      console.warn("A API retornou sucesso: falso para atendentes", json.error);
       return [];
     }
 
     return json.data || [];
   } catch (error) {
-    console.error("Error fetching attendants:", error);
+    console.error("Erro ao buscar atendentes:", error);
     return [];
   }
 };
 
-// Queue 1 = Waiting/Pending Human
+/**
+ * Busca a lista de contatos em espera (fila 1) da API do Suri.
+ * @param baseUrl - A URL base da API do Suri.
+ * @param token - O token de autorização para a API.
+ * @returns Uma promessa que resolve para uma lista de contatos em espera.
+ * @throws Lança um erro se a requisição à API falhar.
+ */
+// Fila 1 = Esperando/Pendente Humano
 export const fetchWaitingContacts = async (
   baseUrl: string,
   token: string
@@ -82,11 +105,11 @@ export const fetchWaitingContacts = async (
   const endpoint = `${getCleanUrl(baseUrl)}/api/contacts/list`;
 
   const payload = {
-    queue: 1, // Filter for "Waiting" queue
-    limit: 100, // Maximize retrieval for the dashboard
+    queue: 1, // Filtro para a fila "Esperando"
+    limit: 100, // Maximiza a busca para o dashboard
     orderBy: "lastActivity",
-    orderType: "asc", // Ascending to see who has been waiting the longest at the top
-    sessionType: 0 // 0 usually means Receptive (customer initiated)
+    orderType: "asc", // Ascendente para ver quem está esperando há mais tempo no topo
+    sessionType: 0 // 0 geralmente significa Receptivo (iniciado pelo cliente)
   };
 
   try {
@@ -101,23 +124,29 @@ export const fetchWaitingContacts = async (
     });
 
     if (!response.ok) {
-      throw new Error(`API Request failed: ${response.status} ${response.statusText}`);
+      throw new Error(`A requisição à API falhou: ${response.status} ${response.statusText}`);
     }
 
     const json: SuriApiResponse<{ items: SuriContact[] }> = await response.json();
 
     if (!json.success) {
-      throw new Error(json.error || "Unknown API error");
+      throw new Error(json.error || "Erro desconhecido na API");
     }
 
     return json.data?.items || [];
   } catch (error) {
-    console.error("Error fetching Suri contacts:", error);
+    console.error("Erro ao buscar contatos do Suri:", error);
     throw error;
   }
 };
 
-// Queue 2 = In Attendance (Human)
+/**
+ * Busca a lista de contatos em atendimento (fila 2) da API do Suri.
+ * @param baseUrl - A URL base da API do Suri.
+ * @param token - O token de autorização para a API.
+ * @returns Uma promessa que resolve para uma lista de contatos ativos.
+ */
+// Fila 2 = Em Atendimento (Humano)
 export const fetchActiveContacts = async (
   baseUrl: string,
   token: string
@@ -125,9 +154,9 @@ export const fetchActiveContacts = async (
 
   const endpoint = `${getCleanUrl(baseUrl)}/api/contacts/list`;
 
-  // We fetch both active and receptive sessions in queue 2
+  // Buscamos tanto sessões ativas quanto receptivas na fila 2
   const payload = {
-    queue: 2, // Filter for "In Attendance" queue
+    queue: 2, // Filtro para a fila "Em Atendimento"
     limit: 100,
     orderBy: "lastActivity",
     orderType: "desc"
@@ -145,18 +174,18 @@ export const fetchActiveContacts = async (
     });
 
     if (!response.ok) {
-      throw new Error(`API Request failed: ${response.status} ${response.statusText}`);
+      throw new Error(`A requisição à API falhou: ${response.status} ${response.statusText}`);
     }
 
     const json: SuriApiResponse<{ items: SuriContact[] }> = await response.json();
 
     if (!json.success) {
-      throw new Error(json.error || "Unknown API error");
+      throw new Error(json.error || "Erro desconhecido na API");
     }
 
     return json.data?.items || [];
   } catch (error) {
-    console.error("Error fetching active contacts:", error);
+    console.error("Erro ao buscar contatos ativos:", error);
     return [];
   }
 };

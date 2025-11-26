@@ -4,6 +4,12 @@ import { SuriContact } from './types';
 const BUSINESS_START_HOUR = Number(import.meta.env.VITE_BUSINESS_START_HOUR) || 8;
 const BUSINESS_END_HOUR = Number(import.meta.env.VITE_BUSINESS_END_HOUR) || 16;
 
+/**
+ * Calcula o total de minutos dentro do horário comercial entre duas datas.
+ * @param start - A data de início do período.
+ * @param end - A data de fim do período.
+ * @returns O número total de minutos comerciais.
+ */
 export const getBusinessMinutes = (start: Date | string, end: Date | string): number => {
     const startDate = typeof start === 'string' ? new Date(start) : start;
     const endDate = typeof end === 'string' ? new Date(end) : end;
@@ -38,6 +44,11 @@ export const getBusinessMinutes = (start: Date | string, end: Date | string): nu
     return Math.floor(totalMinutes);
 };
 
+/**
+ * Formata uma duração de tempo de forma inteligente, exibindo em minutos, horas ou dias.
+ * @param dateInput - A data inicial para calcular a duração.
+ * @returns Uma string formatada representando a duração (ex: "5m", "2h 30m", "3d 4h").
+ */
 export const formatSmartDuration = (dateInput: string | Date): string => {
     const now = new Date();
     const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
@@ -57,14 +68,28 @@ export const formatSmartDuration = (dateInput: string | Date): string => {
     }
 };
 
+/**
+ * Representa o status do SLA de um contato.
+ */
 export interface SlaStatus {
+    /** Indica se o SLA está vencido. */
     isOverdue: boolean;
+    /** Minutos de atraso se o SLA estiver vencido. */
     minutesOverdue: number;
+    /** Minutos restantes antes do vencimento do SLA. */
     minutesRemaining: number;
+    /** Tempo formatado, negativo se vencido. */
     formattedTime: string;
+    /** Percentual do tempo de SLA decorrido. */
     percentage: number; // 0 to 100 (or more if overdue)
 }
 
+/**
+ * Calcula o status do SLA para um contato com base no tempo de espera.
+ * @param contact - O objeto de contato do Suri.
+ * @param slaLimit - O limite de SLA em minutos.
+ * @returns Um objeto com o status detalhado do SLA.
+ */
 export const getSlaStatus = (contact: SuriContact, slaLimit: number): SlaStatus => {
     const now = new Date();
     const waitTime = parseISO(contact.lastActivity);
@@ -92,6 +117,11 @@ export const getSlaStatus = (contact: SuriContact, slaLimit: number): SlaStatus 
     };
 };
 
+/**
+ * Formata uma duração em segundos para um formato legível (dias, horas, minutos).
+ * @param totalSeconds - O total de segundos a ser formatado.
+ * @returns Uma string formatada da duração (ex: "5m", "2h 30m", "1d 4h").
+ */
 export const formatDurationFromSeconds = (totalSeconds: number): string => {
     const minutes = Math.floor(totalSeconds / 60);
     const hours = Math.floor(minutes / 60);
@@ -108,10 +138,21 @@ export const formatDurationFromSeconds = (totalSeconds: number): string => {
     }
 };
 
+/**
+ * Calcula a duração em segundos dentro do horário comercial entre duas datas.
+ * @param start - A data de início.
+ * @param end - A data de fim.
+ * @returns A duração em segundos.
+ */
 export const getBusinessDurationInSeconds = (start: Date | string, end: Date | string): number => {
     return getBusinessMinutes(start, end) * 60;
 };
 
+/**
+ * Calcula e formata a duração de um atendimento.
+ * @param contact - O contato para o qual a duração do atendimento será calculada.
+ * @returns A duração formatada como string.
+ */
 export const getAttendanceDuration = (contact: SuriContact): string => {
     const now = new Date();
     // Use dateAnswer if available (start of attendance), otherwise fallback to lastActivity
@@ -123,6 +164,12 @@ export const getAttendanceDuration = (contact: SuriContact): string => {
     return formatDurationFromSeconds(seconds);
 };
 
+/**
+ * Obtém o nome do departamento para um contato, usando um mapa de mapeamento.
+ * @param contact - O contato do Suri.
+ * @param map - Um mapa de IDs de departamento para nomes.
+ * @returns O nome do departamento ou 'Geral' se não for encontrado.
+ */
 export const getDepartmentName = (contact: SuriContact, map: Record<string, string>): string => {
     // Try specific department first, then agent's department, then default
     const id = contact.departmentId || contact.agent?.departmentId || contact.defaultDepartmentId;
@@ -136,6 +183,13 @@ export const getDepartmentName = (contact: SuriContact, map: Record<string, stri
     return id;
 };
 
+/**
+ * Obtém uma lista de todos os nomes de departamentos únicos e ordenados.
+ * @param waitingContacts - Lista de contatos em espera.
+ * @param activeContacts - Lista de contatos ativos.
+ * @param departmentMap - Mapa de IDs de departamento para nomes.
+ * @returns Uma array de strings com os nomes dos departamentos.
+ */
 export function getAllDepartments(
     waitingContacts: SuriContact[],
     activeContacts: SuriContact[],
@@ -160,15 +214,29 @@ export function getAllDepartments(
         .sort();
 }
 
+/**
+ * Define a estrutura de uma coluna no dashboard.
+ */
 export interface DashboardColumn {
+    /** Identificador único da coluna. */
     id: string;
+    /** Título exibido na coluna. */
     title: string;
+    /** Lista de contatos a serem exibidos na coluna. */
     contacts: SuriContact[];
+    /** Indica se a coluna está vazia. */
     isEmpty?: boolean;
-    startPosition?: number; // Starting queue position for this column
-    hasMore?: boolean; // Indicates if the queue continues in the next column
+    /** Posição inicial da fila para esta coluna. */
+    startPosition?: number;
+    /** Indica se a fila continua na próxima coluna. */
+    hasMore?: boolean;
 }
 
+/**
+ * Ordena os contatos ativos pela duração do atendimento (mais longos primeiro).
+ * @param contacts - A lista de contatos ativos a ser ordenada.
+ * @returns A lista de contatos ordenada.
+ */
 export const sortActiveContactsByDuration = (contacts: SuriContact[]): SuriContact[] => {
     return [...contacts].sort((a, b) => {
         const startA = a.agent?.dateAnswer ? parseISO(a.agent.dateAnswer).getTime() : parseISO(a.lastActivity).getTime();
@@ -177,6 +245,14 @@ export const sortActiveContactsByDuration = (contacts: SuriContact[]): SuriConta
     });
 };
 
+/**
+ * Gera páginas de colunas para o dashboard a partir de uma lista de contatos.
+ * @param contacts - A lista de contatos a ser exibida.
+ * @param departmentMap - O mapa de IDs de departamento para nomes.
+ * @param itemsPerColumn - O número de itens por coluna.
+ * @param columnsPerPage - O número de colunas por página.
+ * @returns Uma matriz de páginas, onde cada página é uma matriz de colunas.
+ */
 export function generateDashboardPages(
     contacts: SuriContact[],
     departmentMap: Record<string, string>,

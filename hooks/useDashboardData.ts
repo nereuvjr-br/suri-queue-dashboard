@@ -22,6 +22,17 @@ const DEPARTMENT_NAMES: Record<string, string> = {
     'cb36536157': 'Sem Escolha de Setor'
 };
 
+/**
+ * Hook personalizado para gerenciar os dados do dashboard.
+ *
+ * Este hook é responsável por:
+ * - Buscar e manter os dados de contatos em espera e ativos.
+ * - Gerenciar a configuração da aplicação (intervalo de atualização, limite de SLA).
+ * - Lidar com o estado de carregamento, erros e o mapa de departamentos.
+ * - Atualizar os dados periodicamente.
+ *
+ * @returns Um objeto contendo o estado do dashboard e as funções para interagir com ele.
+ */
 export const useDashboardData = () => {
     const [config, setConfig] = useState<AppConfig>(() => {
         const saved = localStorage.getItem('suri_config');
@@ -39,6 +50,9 @@ export const useDashboardData = () => {
     const [departmentMap, setDepartmentMap] = useState<Record<string, string>>(DEPARTMENT_NAMES);
     const [error, setError] = useState<string | null>(null);
 
+    /**
+     * Carrega os nomes dos departamentos da API e os mescla com o mapa de departamentos padrão.
+     */
     const loadDepartments = useCallback(async () => {
         if (!API_URL || !API_KEY) return;
         try {
@@ -54,11 +68,14 @@ export const useDashboardData = () => {
             });
             setDepartmentMap(newMap);
         } catch (e) {
-            console.warn("Could not auto-load departments, using hardcoded map", e);
+            console.warn("Não foi possível carregar os departamentos automaticamente, usando mapa fixo", e);
             setDepartmentMap(DEPARTMENT_NAMES);
         }
     }, []);
 
+    /**
+     * Busca os dados de contatos (em espera e ativos) e atendentes da API.
+     */
     const fetchData = useCallback(async () => {
         if (!API_URL || !API_KEY) return;
         setError(null);
@@ -76,7 +93,7 @@ export const useDashboardData = () => {
             setActiveContacts(active);
             setAttendants(agents);
         } catch (err: any) {
-            setError(err.message || "Failed to fetch data");
+            setError(err.message || "Falha ao buscar dados");
         }
     }, [departmentMap, loadDepartments]);
 
@@ -90,6 +107,10 @@ export const useDashboardData = () => {
         return () => clearInterval(interval);
     }, [fetchData, config.refreshInterval]);
 
+    /**
+     * Salva a nova configuração da aplicação no estado e no localStorage.
+     * @param newConfig - O novo objeto de configuração.
+     */
     const handleSaveConfig = (newConfig: AppConfig) => {
         setConfig(newConfig);
         localStorage.setItem('suri_config', JSON.stringify(newConfig));
@@ -101,14 +122,23 @@ export const useDashboardData = () => {
     };
 
     return {
+        /** A configuração atual da aplicação. */
         config,
+        /** Indica se o modal de configuração está aberto. */
         isConfigOpen,
+        /** Função para abrir ou fechar o modal de configuração. */
         setIsConfigOpen,
+        /** A lista de contatos atualmente em espera. */
         waitingContacts,
+        /** A lista de contatos atualmente em atendimento. */
         activeContacts,
+        /** A lista de atendentes. */
         attendants,
+        /** O mapa de IDs de departamento para nomes. */
         departmentMap,
+        /** A mensagem de erro, se houver. */
         error,
+        /** Função para salvar a configuração e recarregar os dados. */
         handleSaveConfig
     };
 };

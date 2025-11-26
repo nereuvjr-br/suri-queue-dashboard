@@ -1,20 +1,33 @@
 import React, { useMemo } from 'react';
 import { SuriContact, SuriAttendant } from '../types';
-import { parseISO, subSeconds } from 'date-fns';
+import { parseISO } from 'date-fns';
 import { formatDurationFromSeconds, getBusinessDurationInSeconds } from '../utils';
 
+/**
+ * @interface PcDepartmentStatusDashboardProps
+ * Propriedades para o componente PcDepartmentStatusDashboard.
+ */
 interface PcDepartmentStatusDashboardProps {
+    /** A lista de contatos atualmente ativos. */
     activeContacts: SuriContact[];
+    /** Um mapa de IDs de departamento para seus nomes correspondentes. */
     departmentMap: Record<string, string>;
+    /** A lista de todos os atendentes, usada para mapear IDs a nomes. */
     attendants: SuriAttendant[];
-    waitingContacts?: SuriContact[];
-    slaLimit?: number;
-    businessHours?: { start: number; end: number };
+    /** A data e hora atual, para cálculos de duração consistentes. */
     currentTime: Date;
 }
 
 const ALERT_LIMIT_MINUTES = Number(import.meta.env.VITE_AVG_TIME_ALERT_LIMIT) || 30;
 
+/**
+ * @component PcDepartmentStatusDashboard
+ * Um dashboard otimizado para PC que exibe o status e as métricas de desempenho dos departamentos
+ * com atendimentos ativos, em um layout de grid responsivo.
+ *
+ * @param {PcDepartmentStatusDashboardProps} props - As propriedades do componente.
+ * @returns O dashboard de status dos departamentos para PC.
+ */
 const PcDepartmentStatusDashboard: React.FC<PcDepartmentStatusDashboardProps> = ({
     activeContacts,
     departmentMap,
@@ -34,16 +47,14 @@ const PcDepartmentStatusDashboard: React.FC<PcDepartmentStatusDashboardProps> = 
         const now = currentTime;
 
         activeContacts.forEach(contact => {
-            // Try to get department from agent first, then fallback to contact fields
             const deptId = contact.agent?.departmentId || contact.departmentId || contact.defaultDepartmentId || 'unknown';
             const current = stats.get(deptId) || { count: 0, totalDuration: 0, longestDuration: 0, longestAgentName: '', agents: new Set<string>() };
 
             const startTime = contact.agent?.dateAnswer ? parseISO(contact.agent.dateAnswer) : parseISO(contact.lastActivity);
-            // Use business seconds for duration (cumulative from previous days, respecting business hours)
             const duration = getBusinessDurationInSeconds(startTime, now);
 
             const agentId = contact.agent?.platformUserId || '';
-            const agentName = agentNameMap[agentId] || 'Desconhecido';
+            const agentName = agentId ? (agentNameMap[agentId] || 'Desconhecido') : 'Desconhecido';
 
             if (agentId) {
                 current.agents.add(agentId);
@@ -88,21 +99,18 @@ const PcDepartmentStatusDashboard: React.FC<PcDepartmentStatusDashboardProps> = 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 content-start">
                 {departmentStats.map((dept) => (
                     <div key={dept.id} className="industrial-panel p-2 flex items-center gap-2 relative overflow-hidden group">
-                        {/* Alert Background Pulse */}
                         {dept.avgDuration > ALERT_LIMIT_MINUTES * 60 ? (
                             <div className="absolute inset-0 bg-red-500/20 animate-pulse z-0" />
                         ) : dept.activeCount >= 5 ? (
                             <div className="absolute inset-0 bg-purple-500/5 animate-pulse z-0" />
                         ) : null}
 
-                        {/* Icon Placeholder or Initials */}
                         <div className="relative shrink-0">
                             <div className="w-12 h-12 rounded bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center text-xl font-bold text-zinc-500 shadow-lg">
                                 {dept.name.substring(0, 2).toUpperCase()}
                             </div>
                         </div>
 
-                        {/* Info */}
                         <div className="flex-1 min-w-0 z-10 flex flex-col h-full justify-between py-1">
                             <div>
                                 <h3 className="text-base font-bold text-white truncate leading-tight" title={dept.name}>
@@ -134,11 +142,9 @@ const PcDepartmentStatusDashboard: React.FC<PcDepartmentStatusDashboardProps> = 
                                     <span className="text-sm font-mono font-bold text-amber-500 leading-none">
                                         {formatDurationFromSeconds(dept.longestDuration)}
                                     </span>
-                                    {/* Tooltip for Longest Agent Name */}
                                     <div className="absolute bottom-full mb-2 right-0 bg-zinc-900 text-white text-[10px] px-2 py-1 rounded border border-zinc-700 whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity z-50 pointer-events-none">
                                         {dept.longestAgentName}
                                     </div>
-                                    {/* Inline Name for TV visibility */}
                                     <span className="text-[8px] text-zinc-600 truncate max-w-[60px] mt-0.5">
                                         {dept.longestAgentName.split(' ')[0]}
                                     </span>
