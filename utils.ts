@@ -62,8 +62,8 @@ export const formatSmartDuration = (dateInput: string | Date): string => {
         const remainingMinutes = minutes % 60;
         return `${hours}h ${remainingMinutes}m`;
     } else {
-        const displayDays = Math.floor(hours / 8);
-        const remainingHours = hours % 8;
+        const displayDays = Math.floor(hours / 24);
+        const remainingHours = hours % 24;
         return `${displayDays}d ${remainingHours}h`;
     }
 };
