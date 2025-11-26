@@ -12,17 +12,39 @@ import ConfigModal from './ConfigModal';
 import { generateDashboardPages, getBusinessMinutes, formatSmartDuration, sortActiveContactsByDuration, formatDurationFromSeconds, getBusinessDurationInSeconds } from '../utils';
 import { parseISO, subSeconds } from 'date-fns';
 
+/**
+ * @interface PcDashboardProps
+ * Propriedades para o componente PcDashboard.
+ */
 interface PcDashboardProps {
+    /** A configuração atual da aplicação. */
     config: AppConfig;
+    /** Lista de contatos aguardando na fila. */
     waitingContacts: SuriContact[];
+    /** Lista de contatos em atendimento. */
     activeContacts: SuriContact[];
+    /** Lista de todos os atendentes. */
     attendants: SuriAttendant[];
+    /** Mapa de IDs de departamento para nomes. */
     departmentMap: Record<string, string>;
+    /** Controla a visibilidade do modal de configuração. */
     isConfigOpen: boolean;
+    /** Função para alterar a visibilidade do modal de configuração. */
     setIsConfigOpen: (isOpen: boolean) => void;
+    /** Função para salvar as configurações. */
     onSaveConfig: (config: AppConfig) => void;
 }
 
+/**
+ * @component PcDashboard
+ * O componente principal do dashboard para desktops. Ele integra várias visualizações
+ * (fila de espera, atendimentos ativos, status de atendentes e departamentos)
+ * em uma interface com abas. Também gerencia modais para detalhes de contato,
+ * guia do usuário e configurações.
+ *
+ * @param {PcDashboardProps} props - As propriedades para renderizar o dashboard.
+ * @returns O componente de dashboard completo para PC.
+ */
 const PcDashboard: React.FC<PcDashboardProps> = ({
     config,
     waitingContacts,
@@ -40,21 +62,18 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
     const [selectedContact, setSelectedContact] = useState<SuriContact | null>(null);
     const [currentTime, setCurrentTime] = useState(new Date());
 
-    // Clock
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
 
-    // Generate columns for Waiting View (No pagination, high limits)
     const waitingColumns = useMemo(() => {
-        const pages = generateDashboardPages(waitingContacts, departmentMap, 1000, 1000); // High limits to get all in one page
+        const pages = generateDashboardPages(waitingContacts, departmentMap, 1000, 1000);
         return pages[0] || [];
     }, [waitingContacts, departmentMap]);
 
-    // Generate columns for Active View (No pagination, high limits)
     const activeColumns = useMemo(() => {
-        const pages = generateDashboardPages(sortActiveContactsByDuration(activeContacts), departmentMap, 1000, 1000); // High limits
+        const pages = generateDashboardPages(sortActiveContactsByDuration(activeContacts), departmentMap, 1000, 1000);
         return pages[0] || [];
     }, [activeContacts, departmentMap]);
 
@@ -65,7 +84,6 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
         let totalWaitTimeSeconds = 0;
 
         waitingContacts.forEach(contact => {
-            // Use queue_start_time if available, otherwise fallback to lastActivity
             const startTime = contact.queue_start_time ? parseISO(contact.queue_start_time) : parseISO(contact.lastActivity);
             const waitDuration = getBusinessDurationInSeconds(startTime, currentTime);
 
@@ -82,7 +100,6 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
 
         let totalActiveSeconds = 0;
         activeContacts.forEach(c => {
-            // Use dateAnswer if available (start of attendance), otherwise fallback to lastActivity
             const startTime = c.agent?.dateAnswer ? parseISO(c.agent.dateAnswer) : parseISO(c.lastActivity);
             const duration = getBusinessDurationInSeconds(startTime, currentTime);
             totalActiveSeconds += duration;
@@ -112,7 +129,6 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
                     </div>
                 </div>
 
-                {/* Navigation Tabs */}
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setActiveTab('waiting')}
@@ -172,7 +188,6 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
                 </div>
             </header>
 
-            {/* Metrics Strip */}
             <div className="h-12 bg-zinc-900 border-b border-zinc-800 flex items-center px-6 gap-6 overflow-x-auto custom-scrollbar shrink-0">
                 <div className="flex gap-6 flex-1 justify-end">
                     <div className="flex flex-col items-end">
@@ -211,7 +226,6 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
                 </div>
             </div>
 
-            {/* Main Content */}
             <main className="flex-1 overflow-hidden relative bg-zinc-950">
                 {activeTab === 'waiting' && (
                     <PcWaitingTable

@@ -1,14 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { AppConfig } from '../types';
 
+/**
+ * @interface ConfigModalProps
+ * Propriedades para o componente ConfigModal.
+ */
 interface ConfigModalProps {
+  /** Se o modal está aberto ou fechado. */
   isOpen: boolean;
+  /** Função a ser chamada quando o modal for fechado. */
   onClose: () => void;
+  /** Função a ser chamada para salvar as novas configurações. */
   onSave: (config: AppConfig) => void;
+  /** A configuração inicial a ser exibida no modal. */
   initialConfig: AppConfig;
+  /** Mapa opcional de departamentos para exibição. */
   departmentMap?: Record<string, string>;
 }
 
+/**
+ * @component ConfigModal
+ * Um modal para configurar as preferências do dashboard, como o intervalo de atualização
+ * e o limite de SLA. Também exibe as variáveis de ambiente.
+ *
+ * @param {ConfigModalProps} props - As propriedades para o modal.
+ * @returns O componente do modal de configuração renderizado, ou `null` se `isOpen` for falso.
+ */
 const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose, onSave, initialConfig, departmentMap }) => {
   const [interval, setInterval] = useState(initialConfig.refreshInterval);
   const [sla, setSla] = useState(initialConfig.slaLimit || 15);
@@ -20,7 +37,7 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose, onSave, init
       setInterval(initialConfig.refreshInterval);
       setSla(initialConfig.slaLimit || 15);
 
-      // Load env vars
+      // Carrega as variáveis de ambiente
       const vars: Record<string, string> = {};
       for (const key in import.meta.env) {
         if (key.startsWith('VITE_')) {
@@ -33,6 +50,10 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose, onSave, init
 
   if (!isOpen) return null;
 
+  /**
+   * Manipula o envio do formulário, salvando as configurações.
+   * @param {React.FormEvent} e - O evento do formulário.
+   */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
@@ -42,6 +63,9 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose, onSave, init
     onClose();
   };
 
+  /**
+   * Restaura as configurações para os valores padrão do ambiente.
+   */
   const handleReset = () => {
     const defaultInterval = Number(import.meta.env.VITE_REFRESH_INTERVAL) || 15;
     const defaultSla = Number(import.meta.env.VITE_SLA_LIMIT) || 15;
@@ -53,7 +77,7 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose, onSave, init
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-300">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
 
-        {/* Header */}
+        {/* Cabeçalho */}
         <div className="px-6 py-5 bg-gradient-to-r from-red-600 to-red-700 flex justify-between items-center shrink-0">
           <div>
             <h2 className="text-xl font-bold text-white tracking-tight">Configurações do Sistema</h2>
@@ -69,7 +93,7 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose, onSave, init
           </button>
         </div>
 
-        {/* Tabs */}
+        {/* Abas */}
         <div className="flex border-b border-gray-100 px-6 pt-2 shrink-0">
           <button
             onClick={() => setActiveTab('settings')}
@@ -97,7 +121,7 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose, onSave, init
           </button>
         </div>
 
-        {/* Content */}
+        {/* Conteúdo */}
         <div className="flex-1 overflow-y-auto p-6 bg-gray-50/50">
 
           {activeTab === 'settings' && (
@@ -203,7 +227,7 @@ const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose, onSave, init
           )}
         </div>
 
-        {/* Footer */}
+        {/* Rodapé */}
         <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center shrink-0">
           {activeTab === 'settings' ? (
             <>

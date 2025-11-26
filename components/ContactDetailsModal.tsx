@@ -5,14 +5,31 @@ import { ptBR } from 'date-fns/locale';
 import PhoneDisplay from './PhoneDisplay';
 import { getBusinessMinutes } from '../utils';
 
+/**
+ * @interface ContactDetailsModalProps
+ * Propriedades para o componente ContactDetailsModal.
+ */
 interface ContactDetailsModalProps {
+    /** O objeto de contato a ser exibido. Se nulo, o modal não é renderizado. */
     contact: SuriContact | null;
+    /** Função para fechar o modal. */
     onClose: () => void;
+    /** Mapa de IDs de departamento para nomes, para exibição. */
     departmentMap?: Record<string, string>;
+    /** Lista de atendentes para encontrar o nome do agente. */
     attendants?: SuriAttendant[];
+    /** O limite de SLA em minutos para destacar o tempo de espera. */
     slaLimit?: number;
 }
 
+/**
+ * @component ContactDetailsModal
+ * Um modal que exibe informações detalhadas sobre um contato específico,
+ * incluindo tempos de espera, dados de atendimento e variáveis personalizadas.
+ *
+ * @param {ContactDetailsModalProps} props - As propriedades do componente.
+ * @returns O modal de detalhes do contato renderizado, ou `null` se não houver contato.
+ */
 const ContactDetailsModal: React.FC<ContactDetailsModalProps> = ({ contact, onClose, departmentMap, attendants, slaLimit = 15 }) => {
     const [now, setNow] = useState(new Date());
 
@@ -24,42 +41,53 @@ const ContactDetailsModal: React.FC<ContactDetailsModalProps> = ({ contact, onCl
 
     if (!contact) return null;
 
-    // Helper to get Department Name
+    /**
+     * Obtém o nome de um departamento a partir de seu ID.
+     * @param {string | null | undefined} id - O ID do departamento.
+     * @returns O nome do departamento ou o ID se não for encontrado.
+     */
     const getDepartmentName = (id?: string | null) => {
         if (!id) return 'Nenhum';
         if (departmentMap) {
-            // Try exact match
-            if (departmentMap[id]) return departmentMap[id];
-            // Try case-insensitive match
-            const lowerId = id.toLowerCase();
-            if (departmentMap[lowerId]) return departmentMap[lowerId];
-            // Try finding by value if map is reversed (unlikely but safe)
-            const found = Object.entries(departmentMap).find(([k]) => k.toLowerCase() === lowerId);
-            if (found) return found[1];
+            const lowerId = id.toLowerCase().trim();
+            const foundKey = Object.keys(departmentMap).find(k => k.toLowerCase().trim() === lowerId);
+            if (foundKey) return departmentMap[foundKey];
         }
         return id;
     };
 
-    // Helper to get Agent Name
+    /**
+     * Obtém o nome de um agente a partir de seu ID.
+     * @param {string | undefined} id - O ID do agente.
+     * @returns O nome do agente ou o ID se não for encontrado.
+     */
     const getAgentName = (id?: string) => {
         if (!id) return 'Desconhecido';
         if (attendants) {
-            const agent = attendants.find(a => a.platformUserId === id || a.id === id);
+            const agent = attendants.find(a => a.id === id);
             if (agent) return agent.name;
         }
         return id;
     };
 
-    // Helper to format keys (camelCase/snake_case to Title Case)
+    /**
+     * Formata uma chave (de camelCase/snake_case para Title Case).
+     * @param {string} key - A chave a ser formatada.
+     * @returns A chave formatada.
+     */
     const formatKey = (key: string) => {
         return key
-            .replace(/([A-Z])/g, ' $1') // Add space before capital letters
-            .replace(/_/g, ' ') // Replace underscores with spaces
-            .replace(/^\w/, c => c.toUpperCase()) // Capitalize first letter
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/_/g, ' ')
+            .replace(/^\w/, c => c.toUpperCase())
             .trim();
     };
 
-    // Helper to format values
+    /**
+     * Formata um valor para exibição.
+     * @param {any} value - O valor a ser formatado.
+     * @returns O valor formatado como string.
+     */
     const formatValue = (value: any) => {
         if (value === true) return 'Sim';
         if (value === false) return 'Não';
@@ -68,6 +96,12 @@ const ContactDetailsModal: React.FC<ContactDetailsModalProps> = ({ contact, onCl
         return String(value);
     };
 
+    /**
+     * Cria uma string de duração detalhada (anos, meses, dias, horas, etc.).
+     * @param {Date} start - A data de início.
+     * @param {Date} end - A data de fim.
+     * @returns A string de duração formatada.
+     */
     const getDetailedDurationString = (start: Date, end: Date) => {
         if (start > end) return '0s';
 
@@ -85,6 +119,11 @@ const ContactDetailsModal: React.FC<ContactDetailsModalProps> = ({ contact, onCl
         return parts.join(' ');
     };
 
+    /**
+     * Formata uma duração em minutos para o formato "Xh Ym".
+     * @param {number} minutes - O total de minutos.
+     * @returns A duração formatada.
+     */
     const formatBusinessDuration = (minutes: number) => {
         const h = Math.floor(minutes / 60);
         const m = Math.floor(minutes % 60);
@@ -92,34 +131,17 @@ const ContactDetailsModal: React.FC<ContactDetailsModalProps> = ({ contact, onCl
         return `${m}m`;
     };
 
-    // --- Time Calculations ---
 
-    // 1. Waiting Time (Tempo de Espera)
-    // Start: dateRequest (if available) OR dateCreate
-    // End: dateAnswer (if available) OR now
-    const waitingStartDate = contact.agent?.dateRequest
-        ? parseISO(contact.agent.dateRequest)
-        : (contact.dateCreate ? parseISO(contact.dateCreate) : now);
-
-    const waitingEndDate = contact.agent?.dateAnswer
-        ? parseISO(contact.agent.dateAnswer)
-        : now;
-
+    const waitingStartDate = contact.agent?.dateRequest ? parseISO(contact.agent.dateRequest) : (contact.dateCreate ? parseISO(contact.dateCreate) : now);
+    const waitingEndDate = contact.agent?.dateAnswer ? parseISO(contact.agent.dateAnswer) : now;
     const waitingTimeBusinessMinutes = getBusinessMinutes(waitingStartDate, waitingEndDate);
     const waitingTimeDetailed = getDetailedDurationString(waitingStartDate, waitingEndDate);
 
-    // 2. Service Time (Tempo em Atendimento)
-    // Start: dateAnswer
-    // End: now
     const serviceStartDate = contact.agent?.dateAnswer ? parseISO(contact.agent.dateAnswer) : null;
     const serviceTimeBusinessMinutes = serviceStartDate ? getBusinessMinutes(serviceStartDate, now) : 0;
     const serviceTimeDetailed = serviceStartDate ? getDetailedDurationString(serviceStartDate, now) : '-';
 
-
-    // Determine effective department ID (check agent's department if main is missing)
     const effectiveDepartmentId = contact.departmentId || contact.agent?.departmentId;
-
-    // SLA Status
     const isSlaBreached = waitingTimeBusinessMinutes >= slaLimit;
 
     return (
@@ -128,7 +150,7 @@ const ContactDetailsModal: React.FC<ContactDetailsModalProps> = ({ contact, onCl
                 className="bg-zinc-900 w-full max-w-2xl rounded-xl border border-zinc-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Header */}
+                {/* Cabeçalho */}
                 <div className="p-6 border-b border-zinc-800 flex items-start justify-between bg-zinc-950/50">
                     <div className="flex items-center gap-4">
                         {contact.profilePicture?.url ? (
@@ -151,10 +173,10 @@ const ContactDetailsModal: React.FC<ContactDetailsModalProps> = ({ contact, onCl
                     </button>
                 </div>
 
-                {/* Content */}
+                {/* Conteúdo */}
                 <div className="p-6 h-[60vh] overflow-y-auto custom-scrollbar space-y-8">
 
-                    {/* Primary Info Grid */}
+                    {/* Grid de Informações Primárias */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-4">
                             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-800 pb-2">Informações Básicas</h3>
@@ -196,7 +218,7 @@ const ContactDetailsModal: React.FC<ContactDetailsModalProps> = ({ contact, onCl
                         </div>
                     </div>
 
-                    {/* Agent Info */}
+                    {/* Informações do Agente */}
                     {contact.agent && (
                         <div className="space-y-4">
                             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-800 pb-2">Atendimento Atual</h3>
@@ -216,7 +238,7 @@ const ContactDetailsModal: React.FC<ContactDetailsModalProps> = ({ contact, onCl
                         </div>
                     )}
 
-                    {/* Variables & Custom Fields */}
+                    {/* Variáveis & Campos Personalizados */}
                     {(contact.variables || contact.customFields) && (
                         <div className="space-y-4">
                             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-800 pb-2">Dados Adicionais</h3>
@@ -238,7 +260,7 @@ const ContactDetailsModal: React.FC<ContactDetailsModalProps> = ({ contact, onCl
                     )}
                 </div>
 
-                {/* Footer */}
+                {/* Rodapé */}
                 <div className="p-4 border-t border-zinc-800 bg-zinc-950/30 flex justify-end">
                     <button
                         onClick={onClose}
@@ -252,7 +274,10 @@ const ContactDetailsModal: React.FC<ContactDetailsModalProps> = ({ contact, onCl
     );
 };
 
-// Helper Components & Functions
+/**
+ * @component InfoItem
+ * Um componente auxiliar para exibir um item de informação com rótulo e valor.
+ */
 const InfoItem: React.FC<{ label: string; value: React.ReactNode; subValue?: string; mono?: boolean }> = ({ label, value, subValue, mono }) => (
     <div className="space-y-1">
         <label className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">{label}</label>
@@ -263,6 +288,11 @@ const InfoItem: React.FC<{ label: string; value: React.ReactNode; subValue?: str
     </div>
 );
 
+/**
+ * Retorna o nome do canal com base no tipo.
+ * @param {number} type - O tipo de canal.
+ * @returns O nome do canal.
+ */
 const getChannelName = (type: number) => {
     switch (type) {
         case 0: return 'WhatsApp';
@@ -273,6 +303,11 @@ const getChannelName = (type: number) => {
     }
 };
 
+/**
+ * Formata uma string de data para um formato legível.
+ * @param {string | undefined} dateString - A string de data ISO.
+ * @returns A data formatada ou '-'.
+ */
 const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
     try {

@@ -5,23 +5,40 @@ import { parseISO, subSeconds } from 'date-fns';
 import PhoneDisplay from './PhoneDisplay';
 import UserGuide from './UserGuide';
 
+/**
+ * @interface AttendantViewProps
+ * Propriedades para o componente AttendantView.
+ */
 interface AttendantViewProps {
+    /** Lista de contatos que estão na fila de espera. */
     waitingContacts: SuriContact[];
+    /** Lista de contatos que estão em atendimento. */
     activeContacts: SuriContact[];
+    /** Lista de todos os atendentes do sistema. */
     attendants: SuriAttendant[];
+    /** Mapa de IDs de departamento para seus nomes. */
     departmentMap: Record<string, string>;
 }
 
 const CHAT_BASE_URL = "https://portal.chatbotmaker.io/#/chatbot/cb36342344/messaging/";
-const ALERT_THRESHOLD_MINUTES = 30; // Alert if time > 30m
+const ALERT_THRESHOLD_MINUTES = 30; // Alerta se o tempo > 30m
 
+/**
+ * @component AttendantView
+ * Uma view completa para o atendente, incluindo login, dashboard pessoal,
+ * e listas de contatos em espera e em atendimento.
+ * Gerencia a seleção de perfil, filtros e navegação interna.
+ *
+ * @param {AttendantViewProps} props - As propriedades necessárias para a view.
+ * @returns A interface de usuário para o atendente.
+ */
 const AttendantView: React.FC<AttendantViewProps> = ({
     waitingContacts,
     activeContacts,
     attendants,
     departmentMap
 }) => {
-    // --- Login / Profile Selection State ---
+    // --- Estado de Login / Seleção de Perfil ---
     const [hasSelectedProfile, setHasSelectedProfile] = useState(() => {
         return !!localStorage.getItem('suri_attendant_profile');
     });
@@ -31,24 +48,24 @@ const AttendantView: React.FC<AttendantViewProps> = ({
         return saved ? JSON.parse(saved) : { dept: '', agentId: '' };
     });
 
-    // --- Navigation State ---
+    // --- Estado de Navegação ---
     const [activeTab, setActiveTab] = useState<'dashboard' | 'waiting' | 'active'>('dashboard');
     const [isGuideOpen, setIsGuideOpen] = useState(false);
 
-    // --- Filters State ---
+    // --- Estado dos Filtros ---
     const [selectedDepartment, setSelectedDepartment] = useState<string>(profile.dept || 'all');
     const [selectedAgent, setSelectedAgent] = useState<string>(profile.agentId || 'all');
     const [searchQuery, setSearchQuery] = useState('');
 
-    // --- Timer for Live Updates ---
+    // --- Timer para Atualizações ao Vivo ---
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
-        const timer = setInterval(() => setNow(new Date()), 30000); // Update every 30s
+        const timer = setInterval(() => setNow(new Date()), 30000); // Atualiza a cada 30s
         return () => clearInterval(timer);
     }, []);
 
-    // Update filters when profile changes (login)
+    // Atualiza filtros quando o perfil muda (login)
     useEffect(() => {
         if (hasSelectedProfile) {
             setSelectedDepartment(profile.dept);
@@ -56,6 +73,9 @@ const AttendantView: React.FC<AttendantViewProps> = ({
         }
     }, [hasSelectedProfile, profile]);
 
+    /**
+     * Realiza o login do atendente, salvando o perfil no localStorage.
+     */
     const handleLogin = () => {
         if (profile.dept && profile.agentId) {
             localStorage.setItem('suri_attendant_profile', JSON.stringify(profile));
@@ -64,6 +84,9 @@ const AttendantView: React.FC<AttendantViewProps> = ({
         }
     };
 
+    /**
+     * Realiza o logout do atendente, limpando o perfil do localStorage.
+     */
     const handleLogout = () => {
         localStorage.removeItem('suri_attendant_profile');
         setHasSelectedProfile(false);
@@ -73,7 +96,7 @@ const AttendantView: React.FC<AttendantViewProps> = ({
         setActiveTab('dashboard');
     };
 
-    // Get unique departments from data
+    // Obtém departamentos únicos a partir dos dados
     const departments = useMemo(() => {
         const depts = new Set<string>();
         const allContacts = [...waitingContacts, ...activeContacts];
@@ -84,7 +107,7 @@ const AttendantView: React.FC<AttendantViewProps> = ({
         return Array.from(depts).sort();
     }, [waitingContacts, activeContacts, departmentMap]);
 
-    // --- Derived Data for Dashboard ---
+    // --- Dados Derivados para o Dashboard ---
     const myAgent = attendants.find(a => a.id === profile.agentId);
 
     const myActiveChats = useMemo(() => {
@@ -101,7 +124,7 @@ const AttendantView: React.FC<AttendantViewProps> = ({
         });
     }, [waitingContacts, profile.dept, departmentMap]);
 
-    // --- Metrics Calculation ---
+    // --- Cálculo de Métricas ---
     const timeMetrics = useMemo(() => {
         if (myActiveChats.length === 0) {
             return { avg: 0, max: 0, avgStr: '-', maxStr: '-', isHigh: false };
@@ -111,7 +134,6 @@ const AttendantView: React.FC<AttendantViewProps> = ({
         let maxSeconds = 0;
 
         myActiveChats.forEach(c => {
-            // Use dateAnswer (start of attendance) or fallback to lastActivity
             const startDate = c.agent?.dateAnswer ? parseISO(c.agent.dateAnswer) : parseISO(c.lastActivity);
             const seconds = getBusinessDurationInSeconds(startDate, now);
 
@@ -131,24 +153,21 @@ const AttendantView: React.FC<AttendantViewProps> = ({
         };
     }, [myActiveChats, now]);
 
-    // Filter Logic for Lists
+    // Lógica de Filtragem para as Listas
     const filteredContacts = useMemo(() => {
         const source = activeTab === 'waiting' ? waitingContacts : activeContacts;
 
         return source.filter(contact => {
-            // Filter by Department
             if (activeTab === 'waiting' && selectedDepartment !== 'all') {
                 const deptName = getDepartmentName(contact, departmentMap);
                 if (deptName !== selectedDepartment) return false;
             }
 
-            // Filter by Agent (only relevant for Active tab usually)
             if (activeTab === 'active' && selectedAgent !== 'all') {
                 const agentId = contact.agent?.platformUserId || contact.attendantId;
                 if (agentId !== selectedAgent) return false;
             }
 
-            // Filter by Search
             if (searchQuery) {
                 const query = searchQuery.toLowerCase();
                 return (
@@ -161,7 +180,7 @@ const AttendantView: React.FC<AttendantViewProps> = ({
         });
     }, [activeTab, waitingContacts, activeContacts, selectedDepartment, selectedAgent, searchQuery, departmentMap]);
 
-    // --- Login Screen ---
+    // --- Tela de Login ---
     if (!hasSelectedProfile) {
         return (
             <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4 font-sans text-white relative overflow-hidden">
@@ -243,6 +262,7 @@ const AttendantView: React.FC<AttendantViewProps> = ({
         );
     }
 
+    // --- View Principal ---
     return (
         <div className="h-screen bg-[#020617] text-slate-200 flex font-sans selection:bg-indigo-500/30 selection:text-indigo-200 overflow-hidden">
             {/* Sidebar */}
@@ -296,7 +316,7 @@ const AttendantView: React.FC<AttendantViewProps> = ({
                             : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
                             }`}
                     >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                         <div className="flex-1 text-left">Em Atendimento</div>
                         {activeContacts.length > 0 && (
                             <span className="bg-slate-800 text-slate-300 text-xs py-0.5 px-2 rounded-md border border-white/5">{activeContacts.length}</span>
@@ -378,16 +398,16 @@ const AttendantView: React.FC<AttendantViewProps> = ({
                 </div>
             </aside>
 
-            {/* Main Content */}
+            {/* Conteúdo Principal */}
             <main className="flex-1 flex flex-col min-w-0 bg-[#020617] relative overflow-hidden">
-                {/* Background Effects */}
+                {/* Efeitos de Fundo */}
                 <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-indigo-900/10 rounded-full blur-[100px]" />
                     <div className="absolute bottom-[-10%] left-[10%] w-[500px] h-[500px] bg-blue-900/10 rounded-full blur-[100px]" />
                     <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]" />
                 </div>
 
-                {/* Header */}
+                {/* Cabeçalho */}
                 <header className="h-20 shrink-0 px-8 flex items-center justify-between z-10 border-b border-white/5 bg-slate-900/20 backdrop-blur-sm">
                     <div>
                         <h2 className="text-2xl font-black text-white tracking-tight">
@@ -408,13 +428,13 @@ const AttendantView: React.FC<AttendantViewProps> = ({
                     </div>
                 </header>
 
-                {/* Content Area */}
+                {/* Área de Conteúdo */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-8 z-10">
 
-                    {/* DASHBOARD VIEW */}
+                    {/* VIEW DO DASHBOARD */}
                     {activeTab === 'dashboard' && (
                         <div className="space-y-8">
-                            {/* Stats Grid */}
+                            {/* Grid de Estatísticas */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-6 backdrop-blur-sm relative overflow-hidden group hover:border-indigo-500/30 transition-all">
                                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -470,7 +490,7 @@ const AttendantView: React.FC<AttendantViewProps> = ({
                                 </div>
                             </div>
 
-                            {/* My Active Chats Section */}
+                            {/* Seção Meus Atendimentos Ativos */}
                             <div>
                                 <div className="flex items-center justify-between mb-4">
                                     <h3 className="text-lg font-bold text-white">Meus Atendimentos Ativos</h3>
@@ -524,7 +544,7 @@ const AttendantView: React.FC<AttendantViewProps> = ({
                         </div>
                     )}
 
-                    {/* LIST VIEWS (WAITING & ACTIVE) */}
+                    {/* VIEWS DE LISTA (ESPERA & ATIVOS) */}
                     {activeTab !== 'dashboard' && (
                         <>
                             {filteredContacts.length === 0 ? (
@@ -546,7 +566,6 @@ const AttendantView: React.FC<AttendantViewProps> = ({
                                         const deptName = getDepartmentName(contact, departmentMap);
                                         const isNext = activeTab === 'waiting' && index === 0;
 
-                                        // Find Agent
                                         const agentId = contact.agent?.platformUserId || contact.attendantId;
                                         const agent = agentId ? attendants.find(a => a.id === agentId) : undefined;
 
@@ -598,7 +617,7 @@ const AttendantView: React.FC<AttendantViewProps> = ({
                                                                     {formatSmartDuration(startTime)}
                                                                 </span>
                                                                 {(() => {
-                                                                    const slaStatus = getSlaStatus(contact, 15); // Default SLA 15m if not passed prop
+                                                                    const slaStatus = getSlaStatus(contact, 15); // SLA padrão 15m se não for passada a prop
                                                                     return (
                                                                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded w-fit ${slaStatus.isOverdue ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
                                                                             {slaStatus.isOverdue ? 'Estourado' : 'SLA'} {slaStatus.formattedTime}

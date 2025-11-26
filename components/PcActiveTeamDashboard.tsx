@@ -4,20 +4,34 @@ import { parseISO } from 'date-fns';
 import { formatSmartDuration, DashboardColumn, getAttendanceDuration } from '../utils';
 import PhoneDisplay from './PhoneDisplay';
 
-// Component for displaying active team dashboard
+/**
+ * @interface PcActiveTeamDashboardProps
+ * Propriedades para o componente PcActiveTeamDashboard.
+ */
 interface PcActiveTeamDashboardProps {
+    /** As colunas contendo contatos ativos a serem exibidas no dashboard. */
     columns: DashboardColumn[];
+    /** A lista de atendentes para mapear aos contatos. */
     attendants: SuriAttendant[];
+    /** Função de callback opcional a ser chamada quando um contato é clicado. */
     onContactClick?: (contact: SuriContact) => void;
 }
 
+/**
+ * @component PcActiveTeamDashboard
+ * Um componente de dashboard otimizado para visualização em desktops,
+ * exibindo os atendimentos ativos da equipe em colunas com rolagem horizontal.
+ *
+ * @param {PcActiveTeamDashboardProps} props - As propriedades para renderizar o dashboard.
+ * @returns O dashboard de equipe ativa para PC renderizado.
+ */
 const PcActiveTeamDashboard: React.FC<PcActiveTeamDashboardProps> = ({ columns, attendants, onContactClick }) => {
 
-    // Map attendants by ID for quick lookup
+    // Mapeia os atendentes por ID para busca rápida.
     const attendantMap = useMemo(() => {
         const map: Record<string, SuriAttendant> = {};
         attendants.forEach(a => {
-            map[a.platformUserId] = a;
+            map[a.id] = a;
         });
         return map;
     }, [attendants]);
@@ -35,7 +49,7 @@ const PcActiveTeamDashboard: React.FC<PcActiveTeamDashboardProps> = ({ columns, 
                 <div className="flex-1 flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
                     {columns.map((column) => (
                         <div key={column.id} className="flex flex-col gap-2 bg-zinc-900/50 rounded-sm p-2 border border-zinc-800 w-[350px] shrink-0 h-full shadow-inner overflow-hidden">
-                            {/* Column Header */}
+                            {/* Cabeçalho da Coluna */}
                             <div className="flex items-center justify-between pb-2 border-b border-zinc-800 shrink-0">
                                 <div className="flex items-center gap-2 overflow-hidden">
                                     <div className="w-1 h-3 bg-emerald-500 shrink-0" />
@@ -46,7 +60,7 @@ const PcActiveTeamDashboard: React.FC<PcActiveTeamDashboardProps> = ({ columns, 
                                 </span>
                             </div>
 
-                            {/* Cards Container */}
+                            {/* Container de Cards */}
                             <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar flex flex-col gap-2 pr-1 pt-1">
                                 {column.isEmpty ? (
                                     <div className="h-full flex flex-col items-center justify-center text-zinc-700 gap-3 pb-10">
@@ -59,9 +73,6 @@ const PcActiveTeamDashboard: React.FC<PcActiveTeamDashboardProps> = ({ columns, 
                                     </div>
                                 ) : (
                                     column.contacts.map((contact) => {
-                                        const startTime = parseISO(contact.lastActivity);
-
-                                        // Find Agent using platformUserId from contact.agent
                                         const agentId = contact.agent?.platformUserId;
                                         const agent = agentId ? attendants.find(a => a.id === agentId) : undefined;
                                         const agentName = agent?.name || 'Desconhecido';
@@ -74,7 +85,7 @@ const PcActiveTeamDashboard: React.FC<PcActiveTeamDashboardProps> = ({ columns, 
                                                 onClick={() => onContactClick?.(contact)}
                                             >
                                                 <div className="flex flex-col gap-2">
-                                                    {/* Header: Client Info */}
+                                                    {/* Cabeçalho: Informações do Cliente */}
                                                     <div className="flex items-start justify-between gap-3">
                                                         <div className="min-w-0 flex-1">
                                                             <h4 className="text-sm font-bold text-zinc-200 truncate leading-tight tracking-tight" title={contact.name}>
@@ -93,7 +104,7 @@ const PcActiveTeamDashboard: React.FC<PcActiveTeamDashboardProps> = ({ columns, 
                                                         </div>
                                                     </div>
 
-                                                    {/* Footer: Agent Info */}
+                                                    {/* Rodapé: Informações do Agente */}
                                                     <div className="flex items-center gap-2.5 pt-2 border-t border-zinc-800/50 mt-1">
                                                         {agent?.profilePicture?.url ? (
                                                             <img src={agent.profilePicture.url} alt="" className="w-6 h-6 object-cover grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all" />

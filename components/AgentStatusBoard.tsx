@@ -1,39 +1,54 @@
 import React, { useMemo } from 'react';
 import { SuriAttendant, SuriContact } from '../types';
 
+/**
+ * @interface AgentStatusBoardProps
+ * Propriedades para o componente AgentStatusBoard.
+ */
 interface AgentStatusBoardProps {
+  /** A lista de todos os atendentes. */
   attendants: SuriAttendant[];
+  /** A lista de contatos ativos para referência (atualmente não usado diretamente no componente). */
   activeContacts: SuriContact[];
 }
 
+/**
+ * @component AgentStatusBoard
+ * Um componente que exibe um painel com o status de todos os agentes.
+ * Ele filtra, ordena e exibe os agentes em um grid, mostrando seu status (Online, Ocupado, Offline)
+ * e estatísticas gerais.
+ *
+ * @param {AgentStatusBoardProps} props - As propriedades para renderizar o painel.
+ * @returns O painel de status dos agentes renderizado.
+ */
 const AgentStatusBoard: React.FC<AgentStatusBoardProps> = ({ attendants, activeContacts }) => {
 
-  // Filter and sort agents
+  // Filtra e ordena os agentes válidos.
   const validAgents = useMemo(() => {
     if (!Array.isArray(attendants)) return [];
 
     return [...attendants]
       .filter(a => {
-        // Remove invalid entries
+        // Remove entradas inválidas
         if (!a || typeof a !== 'object') return false;
-        // Remove incomplete registrations (id or name is null)
+        // Remove registros incompletos (id ou nome nulos)
         if (!a.id || !a.name) return false;
-        // Remove "Atendente" placeholder names
+        // Remove nomes de placeholder "Atendente"
         if (a.name.trim() === 'Atendente') return false;
         return true;
       })
       .sort((a, b) => {
-        // Sort: Online (1) > Busy (2) > Offline (0)
+        // Ordena: Online (1) > Ocupado (2) > Offline (0)
         const score = (status: number) => {
-          if (status === 1) return 3; // Online - highest priority
-          if (status === 2) return 2; // Busy
+          if (status === 1) return 3; // Online - prioridade máxima
+          if (status === 2) return 2; // Ocupado
           return 1; // Offline
         };
         return score(b.status || 0) - score(a.status || 0);
       });
   }, [attendants]);
 
-  // Calculate statistics
+  // Calcula as estatísticas dos agentes.
   const stats = useMemo(() => {
     const online = validAgents.filter(a => a.status === 1).length;
     const busy = validAgents.filter(a => a.status === 2).length;
@@ -42,6 +57,11 @@ const AgentStatusBoard: React.FC<AgentStatusBoardProps> = ({ attendants, activeC
     return { online, busy, offline, total: validAgents.length };
   }, [validAgents]);
 
+  /**
+   * Retorna a cor de fundo e borda com base no status do agente.
+   * @param status - O status do agente (0, 1 ou 2).
+   * @returns Uma string de classes CSS para o estilo do card.
+   */
   const getStatusColor = (status: number) => {
     switch (status) {
       case 1: return 'border-emerald-500/50 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.15)]';
@@ -50,6 +70,11 @@ const AgentStatusBoard: React.FC<AgentStatusBoardProps> = ({ attendants, activeC
     }
   };
 
+  /**
+   * Retorna o rótulo de texto para o status do agente.
+   * @param status - O status do agente.
+   * @returns O rótulo do status ('Online', 'Ocupado', 'Offline').
+   */
   const getStatusLabel = (status: number) => {
     switch (status) {
       case 1: return 'Online';
@@ -58,6 +83,11 @@ const AgentStatusBoard: React.FC<AgentStatusBoardProps> = ({ attendants, activeC
     }
   };
 
+  /**
+   * Retorna a cor do indicador de status (ponto).
+   * @param status - O status do agente.
+   * @returns Uma string de classes CSS para o indicador de status.
+   */
   const getStatusDot = (status: number) => {
     switch (status) {
       case 1: return 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)] animate-pulse';
@@ -85,7 +115,7 @@ const AgentStatusBoard: React.FC<AgentStatusBoardProps> = ({ attendants, activeC
   return (
     <div className="h-full flex flex-col gap-6 p-6">
 
-      {/* Statistics Header */}
+      {/* Cabeçalho de Estatísticas */}
       <div className="grid grid-cols-4 gap-4">
         <div className="glass-card p-4 rounded-xl border border-white/10 flex flex-col items-center">
           <div className="text-4xl font-bold text-white">{stats.total}</div>
@@ -108,7 +138,7 @@ const AgentStatusBoard: React.FC<AgentStatusBoardProps> = ({ attendants, activeC
         </div>
       </div>
 
-      {/* Agents Grid */}
+      {/* Grid de Agentes */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {validAgents.map((agent, index) => {

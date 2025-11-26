@@ -5,12 +5,28 @@ import PhoneDisplay from './PhoneDisplay';
 
 import { SuriContact } from '../types';
 
+/**
+ * @interface PcWaitingTableProps
+ * Propriedades para o componente PcWaitingTable.
+ */
 interface PcWaitingTableProps {
+    /** As colunas contendo os contatos em espera a serem exibidas. */
     columns: DashboardColumn[];
+    /** O limite de SLA (Service Level Agreement) em minutos. Padrão é 15. */
     slaLimit?: number;
+    /** Função de callback opcional a ser chamada quando um contato é clicado. */
     onContactClick?: (contact: SuriContact) => void;
 }
 
+/**
+ * @component PcWaitingTable
+ * Um componente que exibe a fila de espera em colunas, otimizado para desktops.
+ * Ele mostra os contatos aguardando atendimento com rolagem horizontal,
+ * destacando informações de tempo de espera e status de SLA.
+ *
+ * @param {PcWaitingTableProps} props - As propriedades para renderizar a tabela de espera.
+ * @returns A tabela da fila de espera para PC renderizada.
+ */
 const PcWaitingTable: React.FC<PcWaitingTableProps> = ({ columns, slaLimit = 15, onContactClick }) => {
     return (
         <div className="h-full overflow-hidden p-4 flex flex-col">
@@ -22,11 +38,9 @@ const PcWaitingTable: React.FC<PcWaitingTableProps> = ({ columns, slaLimit = 15,
                     <span className="text-lg font-bold uppercase tracking-widest">Fila de espera vazia</span>
                 </div>
             ) : (
-                /* Horizontal Scroll Container */
                 <div className="flex-1 flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
                     {columns.map((column) => (
                         <div key={column.id} className="flex flex-col gap-2 bg-zinc-900/50 rounded-sm p-2 border border-zinc-800 w-[350px] shrink-0 h-full shadow-inner overflow-hidden">
-                            {/* Column Header */}
                             <div className="flex items-center justify-between pb-2 border-b border-zinc-800 shrink-0">
                                 <div className="flex items-center gap-2 overflow-hidden">
                                     <div className="w-1 h-3 bg-blue-500 shrink-0" />
@@ -37,7 +51,6 @@ const PcWaitingTable: React.FC<PcWaitingTableProps> = ({ columns, slaLimit = 15,
                                 </span>
                             </div>
 
-                            {/* Cards Container */}
                             <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-2 pr-1 pt-1">
                                 {column.isEmpty ? (
                                     <div className="h-full flex flex-col items-center justify-center text-zinc-700 gap-3 pb-10">
@@ -65,13 +78,11 @@ const PcWaitingTable: React.FC<PcWaitingTableProps> = ({ columns, slaLimit = 15,
                                                         }`}
                                                     onClick={() => onContactClick?.(contact)}
                                                 >
-                                                    {/* Position Badge */}
                                                     <div className="absolute top-2 right-2 text-[10px] font-mono font-bold text-zinc-600">
                                                         #{position.toString().padStart(2, '0')}
                                                     </div>
 
                                                     <div className="flex flex-col gap-2">
-                                                        {/* Header: Avatar & Name */}
                                                         <div className="flex items-center gap-3 pr-6">
                                                             {contact.profilePicture?.url ? (
                                                                 <img src={contact.profilePicture.url} alt="" className="w-8 h-8 object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
@@ -92,7 +103,6 @@ const PcWaitingTable: React.FC<PcWaitingTableProps> = ({ columns, slaLimit = 15,
                                                             </div>
                                                         </div>
 
-                                                        {/* Footer: Time & SLA */}
                                                         <div className="flex items-end justify-between pt-2 border-t border-zinc-800/50 mt-1">
                                                             <div className="flex flex-col">
                                                                 <span className="text-[9px] uppercase tracking-wider font-bold text-zinc-600">Entrada</span>
