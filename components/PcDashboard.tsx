@@ -6,7 +6,11 @@ import PcWaitingTable from './PcWaitingTable';
 import PcActiveTeamDashboard from './PcActiveTeamDashboard';
 import PcAttendantStatusDashboard from './PcAttendantStatusDashboard';
 import PcDepartmentStatusDashboard from './PcDepartmentStatusDashboard';
-import { generateDashboardPages } from '../utils';
+import UserGuide from './UserGuide';
+import ContactDetailsModal from './ContactDetailsModal';
+import ConfigModal from './ConfigModal';
+import { generateDashboardPages, getBusinessMinutes, formatSmartDuration } from '../utils';
+import { parseISO, subSeconds } from 'date-fns';
 
 interface PcDashboardProps {
     config: AppConfig;
@@ -14,6 +18,9 @@ interface PcDashboardProps {
     activeContacts: SuriContact[];
     attendants: SuriAttendant[];
     departmentMap: Record<string, string>;
+    isConfigOpen: boolean;
+    setIsConfigOpen: (isOpen: boolean) => void;
+    onSaveConfig: (config: AppConfig) => void;
 }
 
 const PcDashboard: React.FC<PcDashboardProps> = ({
@@ -22,10 +29,15 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
     activeContacts,
     attendants,
     departmentMap,
+    isConfigOpen,
+    setIsConfigOpen,
+    onSaveConfig,
 }) => {
     const { logout } = useAuth();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'waiting' | 'active' | 'attendants' | 'departments'>('waiting');
+    const [isGuideOpen, setIsGuideOpen] = useState(false);
+    const [selectedContact, setSelectedContact] = useState<SuriContact | null>(null);
 
     // Generate columns for Waiting View (No pagination, high limits)
     const waitingColumns = useMemo(() => {
@@ -38,6 +50,41 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
         const pages = generateDashboardPages(activeContacts, departmentMap, 1000, 1000); // High limits
         return pages[0] || [];
     }, [activeContacts, departmentMap]);
+
+    // Metrics Calculation
+    const metrics = useMemo(() => {
+        const now = new Date();
+        let totalWaitingSeconds = 0;
+        let maxWaitingSeconds = 0;
+        let slaBreachedCount = 0;
+
+        // Active metrics
+        let totalActiveSeconds = 0;
+
+        waitingContacts.forEach(c => {
+            const activityDate = parseISO(c.lastActivity);
+            const businessMinutes = getBusinessMinutes(activityDate, now);
+            const businessSeconds = businessMinutes * 60;
+
+            totalWaitingSeconds += businessSeconds;
+            if (businessSeconds > maxWaitingSeconds) maxWaitingSeconds = businessSeconds;
+            if (businessMinutes >= (config.slaLimit || 15)) slaBreachedCount++;
+        });
+
+        activeContacts.forEach(c => {
+            const duration = Math.max(0, (now.getTime() - parseISO(c.lastActivity).getTime()) / 1000);
+            totalActiveSeconds += duration;
+        });
+
+        return {
+            totalWaiting: waitingContacts.length,
+            activeContacts,
+            avgWaitTimeSeconds: waitingContacts.length > 0 ? Math.floor(totalWaitingSeconds / waitingContacts.length) : 0,
+            longestWaitTimeSeconds: maxWaitingSeconds,
+            slaBreachedCount,
+            avgActiveTimeSeconds: activeContacts.length > 0 ? Math.floor(totalActiveSeconds / activeContacts.length) : 0
+        };
+    }, [waitingContacts, activeContacts, config.slaLimit]);
 
     return (
         <div className="h-screen bg-zinc-950 text-zinc-200 font-sans flex flex-col relative overflow-hidden selection:bg-blue-500 selection:text-white">
@@ -89,6 +136,20 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
 
                 <div className="flex items-center gap-2">
                     <button
+                        onClick={() => setIsConfigOpen(true)}
+                        className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors rounded"
+                        title="Configurações"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    </button>
+                    <button
+                        onClick={() => setIsGuideOpen(true)}
+                        className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors rounded"
+                        title="Guia do Usuário"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </button>
+                    <button
                         onClick={() => navigate('/')}
                         className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors rounded"
                         title="Voltar para TV"
@@ -105,13 +166,60 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
                 </div>
             </header>
 
+            {/* Metrics Strip */}
+            <div className="h-12 bg-zinc-900 border-b border-zinc-800 flex items-center px-6 gap-6 overflow-x-auto custom-scrollbar shrink-0">
+                <div className="flex gap-6 flex-1 justify-end">
+                    <div className="flex flex-col items-end">
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Em Espera</span>
+                        <span className="text-lg font-mono font-bold text-white leading-none">{metrics.totalWaiting}</span>
+                    </div>
+                    <div className="w-px h-6 bg-zinc-800 shrink-0" />
+                    <div className="flex flex-col items-end">
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Ativos</span>
+                        <span className="text-lg font-mono font-bold text-white leading-none">{metrics.activeContacts.length}</span>
+                    </div>
+                    <div className="w-px h-6 bg-zinc-800 shrink-0" />
+                    <div className="flex flex-col items-end">
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">T. Médio Esp.</span>
+                        <span className="text-lg font-mono font-bold text-white leading-none">{formatSmartDuration(subSeconds(new Date(), metrics.avgWaitTimeSeconds))}</span>
+                    </div>
+                    <div className="w-px h-6 bg-zinc-800 shrink-0" />
+                    <div className="flex flex-col items-end">
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Max Espera</span>
+                        <span className={`text-lg font-mono font-bold leading-none ${metrics.longestWaitTimeSeconds > 600 ? 'text-amber-500' : 'text-white'}`}>
+                            {formatSmartDuration(subSeconds(new Date(), metrics.longestWaitTimeSeconds))}
+                        </span>
+                    </div>
+                    <div className="w-px h-6 bg-zinc-800 shrink-0" />
+                    <div className="flex flex-col items-end">
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">SLA Crítico</span>
+                        <span className={`text-lg font-mono font-bold leading-none ${metrics.slaBreachedCount > 0 ? 'text-red-500 animate-pulse' : 'text-zinc-600'}`}>
+                            {metrics.slaBreachedCount}
+                        </span>
+                    </div>
+                    <div className="w-px h-6 bg-zinc-800 shrink-0" />
+                    <div className="flex flex-col items-end">
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">T. Médio Ativo</span>
+                        <span className="text-lg font-mono font-bold text-emerald-500 leading-none">{formatSmartDuration(subSeconds(new Date(), metrics.avgActiveTimeSeconds))}</span>
+                    </div>
+                </div>
+            </div>
+
             {/* Main Content */}
             <main className="flex-1 overflow-hidden relative bg-zinc-950">
                 {activeTab === 'waiting' && (
-                    <PcWaitingTable columns={waitingColumns} slaLimit={config.slaLimit} />
+                    <PcWaitingTable
+                        columns={waitingColumns}
+                        slaLimit={config.slaLimit}
+                        onContactClick={setSelectedContact}
+                    />
                 )}
                 {activeTab === 'active' && (
-                    <PcActiveTeamDashboard columns={activeColumns} attendants={attendants} />
+                    <PcActiveTeamDashboard
+                        columns={activeColumns}
+                        attendants={attendants}
+                        onContactClick={setSelectedContact}
+                    />
                 )}
                 {activeTab === 'attendants' && (
                     <PcAttendantStatusDashboard attendants={attendants} activeContacts={activeContacts} />
@@ -120,6 +228,21 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
                     <PcDepartmentStatusDashboard activeContacts={activeContacts} departmentMap={departmentMap} attendants={attendants} />
                 )}
             </main>
+            <UserGuide isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
+            <ContactDetailsModal
+                contact={selectedContact}
+                onClose={() => setSelectedContact(null)}
+                departmentMap={departmentMap}
+                attendants={attendants}
+                slaLimit={config.slaLimit}
+            />
+            <ConfigModal
+                isOpen={isConfigOpen}
+                onClose={() => setIsConfigOpen(false)}
+                onSave={onSaveConfig}
+                initialConfig={config}
+                departmentMap={departmentMap}
+            />
         </div>
     );
 };

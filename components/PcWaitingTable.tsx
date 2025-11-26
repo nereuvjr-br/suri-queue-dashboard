@@ -3,12 +3,15 @@ import { parseISO, format } from 'date-fns';
 import { formatSmartDuration, getBusinessMinutes, DashboardColumn } from '../utils';
 import PhoneDisplay from './PhoneDisplay';
 
+import { SuriContact } from '../types';
+
 interface PcWaitingTableProps {
     columns: DashboardColumn[];
     slaLimit?: number;
+    onContactClick?: (contact: SuriContact) => void;
 }
 
-const PcWaitingTable: React.FC<PcWaitingTableProps> = ({ columns, slaLimit = 15 }) => {
+const PcWaitingTable: React.FC<PcWaitingTableProps> = ({ columns, slaLimit = 15, onContactClick }) => {
     return (
         <div className="h-full overflow-hidden p-4 flex flex-col">
             {columns.length === 0 ? (
@@ -58,10 +61,11 @@ const PcWaitingTable: React.FC<PcWaitingTableProps> = ({ columns, slaLimit = 15 
                                             return (
                                                 <div
                                                     key={contact.id}
-                                                    className={`relative p-2 border-l-2 transition-all hover:bg-zinc-800 shrink-0 group ${isSlaBreached
+                                                    className={`relative p-2 border-l-2 transition-all hover:bg-zinc-800 shrink-0 group cursor-pointer ${isSlaBreached
                                                         ? 'bg-red-900/10 border-l-red-500 border-y border-r border-zinc-800'
                                                         : 'bg-zinc-900 border-l-zinc-600 border-y border-r border-zinc-800'
                                                         }`}
+                                                    onClick={() => onContactClick?.(contact)}
                                                 >
                                                     {/* Position Badge */}
                                                     <div className="absolute top-2 right-2 text-[10px] font-mono font-bold text-zinc-600">

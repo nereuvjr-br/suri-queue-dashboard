@@ -3,6 +3,7 @@ import { SuriContact, SuriAttendant } from '../types';
 import { getDepartmentName, formatSmartDuration } from '../utils';
 import { parseISO, subSeconds } from 'date-fns';
 import PhoneDisplay from './PhoneDisplay';
+import UserGuide from './UserGuide';
 
 interface AttendantViewProps {
     waitingContacts: SuriContact[];
@@ -32,6 +33,7 @@ const AttendantView: React.FC<AttendantViewProps> = ({
 
     // --- Navigation State ---
     const [activeTab, setActiveTab] = useState<'dashboard' | 'waiting' | 'active'>('dashboard');
+    const [isGuideOpen, setIsGuideOpen] = useState(false);
 
     // --- Filters State ---
     const [selectedDepartment, setSelectedDepartment] = useState<string>(profile.dept || 'all');
@@ -265,8 +267,8 @@ const AttendantView: React.FC<AttendantViewProps> = ({
                     <button
                         onClick={() => setActiveTab('dashboard')}
                         className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all duration-200 ${activeTab === 'dashboard'
-                                ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
-                                : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                            ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
+                            : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
                             }`}
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
@@ -276,8 +278,8 @@ const AttendantView: React.FC<AttendantViewProps> = ({
                     <button
                         onClick={() => setActiveTab('waiting')}
                         className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all duration-200 ${activeTab === 'waiting'
-                                ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
-                                : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                            ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
+                            : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
                             }`}
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -290,8 +292,8 @@ const AttendantView: React.FC<AttendantViewProps> = ({
                     <button
                         onClick={() => setActiveTab('active')}
                         className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all duration-200 ${activeTab === 'active'
-                                ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
-                                : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
+                            ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
+                            : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
                             }`}
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
@@ -365,6 +367,13 @@ const AttendantView: React.FC<AttendantViewProps> = ({
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                         Sair
+                    </button>
+                    <button
+                        onClick={() => setIsGuideOpen(true)}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold text-slate-400 hover:bg-slate-800 hover:text-white transition-all border border-transparent mt-2"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Ajuda
                     </button>
                 </div>
             </aside>
@@ -635,6 +644,7 @@ const AttendantView: React.FC<AttendantViewProps> = ({
                     )}
                 </div>
             </main>
+            <UserGuide isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
         </div>
     );
 };

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { SuriAttendant } from '../types';
+import { SuriAttendant, SuriContact } from '../types';
 import { parseISO } from 'date-fns';
 import { formatSmartDuration, DashboardColumn } from '../utils';
 import PhoneDisplay from './PhoneDisplay';
@@ -8,9 +8,10 @@ import PhoneDisplay from './PhoneDisplay';
 interface PcActiveTeamDashboardProps {
     columns: DashboardColumn[];
     attendants: SuriAttendant[];
+    onContactClick?: (contact: SuriContact) => void;
 }
 
-const PcActiveTeamDashboard: React.FC<PcActiveTeamDashboardProps> = ({ columns, attendants }) => {
+const PcActiveTeamDashboard: React.FC<PcActiveTeamDashboardProps> = ({ columns, attendants, onContactClick }) => {
 
     // Map attendants by ID for quick lookup
     const attendantMap = useMemo(() => {
@@ -67,8 +68,11 @@ const PcActiveTeamDashboard: React.FC<PcActiveTeamDashboardProps> = ({ columns, 
                                         const agentInitial = agentName.charAt(0).toUpperCase();
 
                                         return (
-                                            <div key={contact.id} className="relative p-2 border-l-2 border-l-emerald-500 border-y border-r border-zinc-800 bg-zinc-900 transition-all hover:bg-zinc-800 shrink-0 group">
-
+                                            <div
+                                                key={contact.id}
+                                                className="relative p-2 border-l-2 border-l-emerald-500 border-y border-r border-zinc-800 bg-zinc-900 transition-all hover:bg-zinc-800 shrink-0 group cursor-pointer"
+                                                onClick={() => onContactClick?.(contact)}
+                                            >
                                                 <div className="flex flex-col gap-2">
                                                     {/* Header: Client Info */}
                                                     <div className="flex items-start justify-between gap-3">

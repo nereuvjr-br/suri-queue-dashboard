@@ -73,6 +73,9 @@ const App: React.FC = () => {
                   activeContacts={activeContacts}
                   attendants={attendants}
                   departmentMap={departmentMap}
+                  isConfigOpen={isConfigOpen}
+                  setIsConfigOpen={setIsConfigOpen}
+                  onSaveConfig={handleSaveConfig}
                 />
               </ProtectedRoute>
             }

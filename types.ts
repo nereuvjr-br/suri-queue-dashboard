@@ -52,6 +52,7 @@ export interface SuriContact {
   agent?: SuriAgent;
 
   variables?: Record<string, string>;
+  [key: string]: any;
 }
 
 export interface SuriApiResponse<T> {
