@@ -44,32 +44,10 @@ export const useSystemStatus = () => {
     };
 
     useEffect(() => {
-        /**
-         * Executa a verificação de status para todas as URLs configuradas.
-         */
-        const checkAll = async () => {
-            const portalUrl = import.meta.env.VITE_PORTAL_URL || 'https://portal.chatbotmaker.io/';
-            const portalApiUrl = import.meta.env.VITE_PORTAL_API_URL || 'https://portal.chatbotmaker.io/api/';
-            const userApiUrl = import.meta.env.VITE_API_URL || '';
-
-            const pStatus = await checkUrl(portalUrl);
-            setPortalStatus(pStatus);
-
-            const aStatus = await checkUrl(portalApiUrl);
-            setApiStatus(aStatus);
-
-            if (userApiUrl) {
-                const uStatus = await checkUrl(userApiUrl);
-                setUserApiStatus(uStatus);
-            } else {
-                setUserApiStatus('offline');
-            }
-        };
-
-        checkAll();
-        const intervalTime = Number(import.meta.env.VITE_STATUS_CHECK_INTERVAL) || 30000;
-        const interval = setInterval(checkAll, intervalTime);
-        return () => clearInterval(interval);
+        // Verificação de status desativada conforme solicitação
+        setPortalStatus('online');
+        setApiStatus('online');
+        setUserApiStatus('online');
     }, []);
 
     return {

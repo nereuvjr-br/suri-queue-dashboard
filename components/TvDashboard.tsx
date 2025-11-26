@@ -242,8 +242,89 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
             </header>
             {/* Main Content Area */}
             <main className={`flex-1 flex flex-col overflow-hidden relative ${currentView?.type === 'external' ? '' : 'p-3 gap-3'}`}>
-                {/* ... (o resto do código JSX permanece o mesmo) ... */}
+                {currentView?.type === 'waiting' && (
+                    <WaitingTable
+                        columns={currentView.columns}
+                        slaLimit={config.slaLimit || 15}
+                    />
+                )}
+
+                {currentView?.type === 'active' && (
+                    <ActiveTeamDashboard
+                        columns={currentView.columns}
+                        attendants={attendants}
+                    />
+                )}
+
+                {currentView?.type === 'attendants' && (
+                    <AttendantStatusDashboard
+                        attendants={attendants}
+                        activeContacts={activeContacts}
+                        currentTime={currentTime}
+                    />
+                )}
+
+                {currentView?.type === 'departments' && (
+                    <DepartmentStatusDashboard
+                        activeContacts={activeContacts}
+                        departmentMap={departmentMap}
+                        attendants={attendants}
+                        currentTime={currentTime}
+                    />
+                )}
+
+                {currentView?.type === 'external' && (
+                    <ExternalIframeView url={currentView.url} />
+                )}
+
+                {/* Modals */}
+                {isConfigOpen && (
+                    <ConfigModal
+                        config={config}
+                        onSave={onSaveConfig}
+                        onClose={() => setIsConfigOpen(false)}
+                    />
+                )}
+
+                {isGuideOpen && (
+                    <UserGuide
+                        isOpen={isGuideOpen}
+                        onClose={() => setIsGuideOpen(false)}
+                    />
+                )}
             </main>
+
+            {/* Footer Metrics */}
+            <footer className="h-20 shrink-0 bg-zinc-950 border-t border-zinc-800 grid grid-cols-6 divide-x divide-zinc-800 z-20 relative">
+                <div className="flex flex-col items-center justify-center p-2 group hover:bg-zinc-900 transition-colors">
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">Em Espera</span>
+                    <span className="text-3xl font-mono font-bold text-white tracking-tight">{metrics.totalWaiting}</span>
+                </div>
+                <div className="flex flex-col items-center justify-center p-2 group hover:bg-zinc-900 transition-colors">
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">Ativos</span>
+                    <span className="text-3xl font-mono font-bold text-blue-500 tracking-tight">{metrics.activeContacts.length}</span>
+                </div>
+                <div className="flex flex-col items-center justify-center p-2 group hover:bg-zinc-900 transition-colors">
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">T. Médio Esp.</span>
+                    <span className="text-2xl font-mono font-bold text-zinc-300 tracking-tight">{formatDurationFromSeconds(metrics.avgWaitTimeSeconds)}</span>
+                </div>
+                <div className="flex flex-col items-center justify-center p-2 group hover:bg-zinc-900 transition-colors">
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">Max Espera</span>
+                    <span className={`text-2xl font-mono font-bold tracking-tight ${metrics.longestWaitTimeSeconds > (config.slaLimit || 15) * 60 ? 'text-red-500 animate-pulse' : 'text-zinc-300'}`}>
+                        {formatDurationFromSeconds(metrics.longestWaitTimeSeconds)}
+                    </span>
+                </div>
+                <div className="flex flex-col items-center justify-center p-2 bg-zinc-900/30 group hover:bg-zinc-900 transition-colors">
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">SLA Crítico</span>
+                    <span className={`text-3xl font-mono font-bold tracking-tight ${metrics.slaBreachedCount > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                        {metrics.slaBreachedCount}
+                    </span>
+                </div>
+                <div className="flex flex-col items-center justify-center p-2 group hover:bg-zinc-900 transition-colors">
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">T. Médio Ativo</span>
+                    <span className="text-2xl font-mono font-bold text-emerald-500 tracking-tight">{formatDurationFromSeconds(metrics.avgActiveTimeSeconds)}</span>
+                </div>
+            </footer>
         </div>
     );
 };
