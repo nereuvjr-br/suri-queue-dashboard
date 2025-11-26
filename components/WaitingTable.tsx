@@ -1,6 +1,6 @@
 import React from 'react';
 import { parseISO, format } from 'date-fns';
-import { formatSmartDuration, getBusinessMinutes, DashboardColumn } from '../utils';
+import { formatSmartDuration, getBusinessMinutes, DashboardColumn, getSlaStatus } from '../utils';
 import PhoneDisplay from './PhoneDisplay';
 
 interface WaitingTableProps {
@@ -40,16 +40,14 @@ const WaitingTable: React.FC<WaitingTableProps> = ({ columns, slaLimit = 15 }) =
                 <>
                   {column.contacts.map((contact, index) => {
                     const waitTime = parseISO(contact.lastActivity);
-                    const now = new Date();
-                    const diffInMinutes = getBusinessMinutes(waitTime, now);
-                    const isSlaBreached = diffInMinutes >= slaLimit;
+                    const slaStatus = getSlaStatus(contact, slaLimit);
                     const entryTime = format(waitTime, 'HH:mm');
                     const position = (column.startPosition || 1) + index;
 
                     return (
                       <div
                         key={contact.id}
-                        className={`relative p-2 border-l-2 transition-all hover:bg-zinc-800 shrink-0 group ${isSlaBreached
+                        className={`relative p-2 border-l-2 transition-all hover:bg-zinc-800 shrink-0 group ${slaStatus.isOverdue
                           ? 'bg-red-900/10 border-l-red-500 border-y border-r border-zinc-800'
                           : 'bg-zinc-900 border-l-zinc-600 border-y border-r border-zinc-800'
                           }`}
@@ -65,7 +63,7 @@ const WaitingTable: React.FC<WaitingTableProps> = ({ columns, slaLimit = 15 }) =
                             {contact.profilePicture?.url ? (
                               <img src={contact.profilePicture.url} alt="" className="w-8 h-8 object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
                             ) : (
-                              <div className={`w-8 h-8 flex items-center justify-center text-xs font-bold border ${isSlaBreached ? 'bg-red-900/20 border-red-900 text-red-500' : 'bg-zinc-800 border-zinc-700 text-zinc-400'
+                              <div className={`w-8 h-8 flex items-center justify-center text-xs font-bold border ${slaStatus.isOverdue ? 'bg-red-900/20 border-red-900 text-red-500' : 'bg-zinc-800 border-zinc-700 text-zinc-400'
                                 }`}>
                                 {contact.name.charAt(0).toUpperCase()}
                               </div>
@@ -89,8 +87,13 @@ const WaitingTable: React.FC<WaitingTableProps> = ({ columns, slaLimit = 15 }) =
                             </div>
 
                             <div className="flex flex-col items-end">
-                              <span className="text-[9px] uppercase tracking-wider font-bold text-zinc-600 mb-0.5">Espera</span>
-                              <div className={`text-base font-mono font-bold leading-none tracking-tight ${isSlaBreached ? 'text-red-500 animate-pulse' : 'text-zinc-300'
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className="text-[9px] uppercase tracking-wider font-bold text-zinc-600">SLA</span>
+                                <span className={`text-[9px] font-bold px-1 py-0.5 rounded leading-none ${slaStatus.isOverdue ? 'bg-red-500/20 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                  {slaStatus.formattedTime}
+                                </span>
+                              </div>
+                              <div className={`text-base font-mono font-bold leading-none tracking-tight ${slaStatus.isOverdue ? 'text-red-500 animate-pulse' : 'text-zinc-300'
                                 }`}>
                                 {formatSmartDuration(waitTime)}
                               </div>

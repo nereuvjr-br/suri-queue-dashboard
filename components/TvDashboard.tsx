@@ -12,7 +12,7 @@ import UserGuide from './UserGuide';
 import ConfigModal from './ConfigModal';
 import { parseISO, subSeconds, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { formatSmartDuration, getBusinessMinutes, generateDashboardPages, DashboardColumn } from '../utils';
+import { formatSmartDuration, getBusinessMinutes, generateDashboardPages, DashboardColumn, sortActiveContactsByDuration, formatDurationFromSeconds, getBusinessDurationInSeconds } from '../utils';
 import { useSystemStatus } from '../hooks/useSystemStatus';
 
 interface TvDashboardProps {
@@ -63,7 +63,7 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
     );
 
     const activePages = useMemo(() =>
-        generateDashboardPages(activeContacts, departmentMap),
+        generateDashboardPages(sortActiveContactsByDuration(activeContacts), departmentMap),
         [activeContacts, departmentMap]
     );
 
@@ -118,7 +118,9 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
         });
 
         activeContacts.forEach(c => {
-            const duration = Math.max(0, (now.getTime() - parseISO(c.lastActivity).getTime()) / 1000);
+            // Use dateAnswer if available (start of attendance), otherwise fallback to lastActivity
+            const startTime = c.agent?.dateAnswer ? parseISO(c.agent.dateAnswer) : parseISO(c.lastActivity);
+            const duration = getBusinessDurationInSeconds(startTime, now);
             totalActiveSeconds += duration;
         });
 
@@ -130,7 +132,7 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
             slaBreachedCount,
             avgActiveTimeSeconds: activeContacts.length > 0 ? Math.floor(totalActiveSeconds / activeContacts.length) : 0
         };
-    }, [waitingContacts, activeContacts, config.slaLimit]);
+    }, [waitingContacts, activeContacts, config.slaLimit, currentTime]);
 
     // Clock
     useEffect(() => {
@@ -289,13 +291,13 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
                     <div className="w-px h-6 bg-zinc-800 shrink-0" />
                     <div className="flex flex-col items-end">
                         <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">T. Médio Esp.</span>
-                        <span className="text-lg font-mono font-bold text-white leading-none">{formatSmartDuration(subSeconds(new Date(), metrics.avgWaitTimeSeconds))}</span>
+                        <span className="text-lg font-mono font-bold text-white leading-none">{formatDurationFromSeconds(metrics.avgWaitTimeSeconds)}</span>
                     </div>
                     <div className="w-px h-6 bg-zinc-800 shrink-0" />
                     <div className="flex flex-col items-end">
                         <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Max Espera</span>
                         <span className={`text-lg font-mono font-bold leading-none ${metrics.longestWaitTimeSeconds > 600 ? 'text-amber-500' : 'text-white'}`}>
-                            {formatSmartDuration(subSeconds(new Date(), metrics.longestWaitTimeSeconds))}
+                            {formatDurationFromSeconds(metrics.longestWaitTimeSeconds)}
                         </span>
                     </div>
                     <div className="w-px h-6 bg-zinc-800 shrink-0" />
@@ -308,7 +310,7 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
                     <div className="w-px h-6 bg-zinc-800 shrink-0" />
                     <div className="flex flex-col items-end">
                         <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">T. Médio Ativo</span>
-                        <span className="text-lg font-mono font-bold text-emerald-500 leading-none">{formatSmartDuration(subSeconds(new Date(), metrics.avgActiveTimeSeconds))}</span>
+                        <span className="text-lg font-mono font-bold text-emerald-500 leading-none">{formatDurationFromSeconds(metrics.avgActiveTimeSeconds)}</span>
                     </div>
                 </div>
             </div>
@@ -424,6 +426,7 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
                             <AttendantStatusDashboard
                                 attendants={attendants}
                                 activeContacts={activeContacts}
+                                currentTime={currentTime}
                             />
                         </div>
                     )}
@@ -434,6 +437,7 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
                                 activeContacts={activeContacts}
                                 departmentMap={departmentMap}
                                 attendants={attendants}
+                                currentTime={currentTime}
                             />
                         </div>
                     )}

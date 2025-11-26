@@ -158,6 +158,29 @@ const UserGuide: React.FC<UserGuideProps> = ({ isOpen, onClose }) => {
                                     </section>
 
                                     <section className="space-y-4">
+                                        <h2 className="text-xl font-bold text-white">Controles e Configuração</h2>
+                                        <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
+                                            <p className="mb-4 text-zinc-400">
+                                                No cabeçalho da TV, você encontra botões de controle:
+                                            </p>
+                                            <ul className="space-y-3 text-sm text-zinc-300">
+                                                <li className="flex gap-2">
+                                                    <strong className="text-white">Configurações (Ícone de Engrenagem):</strong>
+                                                    <span>Abre o painel para ajustar o Intervalo de Atualização, Limite de Alerta SLA e visualizar variáveis .env.</span>
+                                                </li>
+                                                <li className="flex gap-2">
+                                                    <strong className="text-white">Pausar/Retomar:</strong>
+                                                    <span>Interrompe a rotação automática das telas.</span>
+                                                </li>
+                                                <li className="flex gap-2">
+                                                    <strong className="text-white">Próxima Tela:</strong>
+                                                    <span>Avança manualmente para a próxima visualização.</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </section>
+
+                                    <section className="space-y-4">
                                         <h2 className="text-xl font-bold text-white">Ciclo de Rotação</h2>
                                         <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
                                             <p className="mb-4 text-zinc-400">
@@ -201,7 +224,7 @@ const UserGuide: React.FC<UserGuideProps> = ({ isOpen, onClose }) => {
                                             </div>
                                             <div className="p-4 bg-zinc-900 rounded-xl border border-zinc-800">
                                                 <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">SLA Crítico</div>
-                                                <p className="text-sm text-zinc-300">Contador de quantas pessoas estouraram o tempo limite. <span className="text-red-500">Pisca em vermelho se &gt; 0.</span></p>
+                                                <p className="text-sm text-zinc-300">Contador de quantas pessoas estouraram o tempo limite configurado. <span className="text-red-500">Pisca em vermelho se &gt; 0.</span></p>
                                             </div>
                                         </div>
                                     </section>
@@ -253,21 +276,29 @@ const UserGuide: React.FC<UserGuideProps> = ({ isOpen, onClose }) => {
                                         <div>
                                             <h2 className="text-xl font-bold text-white mb-3">1. Identificação</h2>
                                             <p className="text-zinc-400 mb-2">
-                                                Ao acessar pela primeira vez, você precisa dizer ao sistema quem você é.
+                                                Ao acessar pela primeira vez, você verá uma tela de login moderna:
                                             </p>
                                             <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-800 text-sm text-zinc-300">
-                                                Selecione seu <strong>Departamento</strong> ➝ Selecione seu <strong>Nome</strong> ➝ Clique em <strong>Entrar</strong>.
-                                                <br />
-                                                <em className="text-zinc-500 block mt-2">O sistema lembrará de você na próxima vez.</em>
+                                                Selecione seu <strong>Departamento</strong> ➝ Selecione seu <strong>Nome</strong> ➝ Clique em <strong>Acessar Painel</strong>.
                                             </div>
                                         </div>
 
                                         <div>
-                                            <h2 className="text-xl font-bold text-white mb-3">2. Meu Dashboard</h2>
+                                            <h2 className="text-xl font-bold text-white mb-3">2. Menu Principal (Barra Lateral)</h2>
+                                            <ul className="space-y-2 text-sm text-zinc-300 bg-zinc-900 p-4 rounded-xl border border-zinc-800">
+                                                <li><strong className="text-indigo-400">Meu Dashboard:</strong> Visão geral com suas métricas pessoais.</li>
+                                                <li><strong className="text-indigo-400">Fila de Espera:</strong> Lista de clientes aguardando atendimento.</li>
+                                                <li><strong className="text-indigo-400">Em Atendimento:</strong> Lista de conversas que você está conduzindo agora.</li>
+                                                <li><strong className="text-indigo-400">Filtros:</strong> Busque por nome/telefone ou filtre por departamento/agente.</li>
+                                            </ul>
+                                        </div>
+
+                                        <div>
+                                            <h2 className="text-xl font-bold text-white mb-3">3. Meu Dashboard</h2>
                                             <p className="text-zinc-400 mb-2">
-                                                A tela inicial mostra um resumo do seu desempenho.
+                                                A tela inicial mostra cartões com informações vitais:
                                             </p>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 <div className="p-4 bg-zinc-900 rounded-xl border border-zinc-800">
                                                     <strong className="text-indigo-400 block mb-1">Meus Atendimentos</strong>
                                                     <span className="text-sm text-zinc-400">Quantas conversas você tem abertas agora.</span>
@@ -276,18 +307,22 @@ const UserGuide: React.FC<UserGuideProps> = ({ isOpen, onClose }) => {
                                                     <strong className="text-blue-400 block mb-1">Fila do Departamento</strong>
                                                     <span className="text-sm text-zinc-400">Quantas pessoas estão esperando especificamente pelo seu setor.</span>
                                                 </div>
+                                                <div className="p-4 bg-zinc-900 rounded-xl border border-zinc-800">
+                                                    <strong className="text-emerald-400 block mb-1">Tempos de Atendimento</strong>
+                                                    <span className="text-sm text-zinc-400">Seu tempo médio e máximo. Borda vermelha se excessivo.</span>
+                                                </div>
                                             </div>
                                         </div>
 
                                         <div>
-                                            <h2 className="text-xl font-bold text-white mb-3">3. Atendendo Clientes</h2>
+                                            <h2 className="text-xl font-bold text-white mb-3">4. Atendendo Clientes</h2>
                                             <p className="text-zinc-400 mb-2">
-                                                Vá para a aba <strong>Fila de Espera</strong>.
+                                                Vá para a aba <strong>Fila de Espera</strong>:
                                             </p>
                                             <ul className="space-y-2 text-sm text-zinc-300">
-                                                <li>• O cliente no topo da lista (marcado como "Próximo") é quem está esperando há mais tempo.</li>
+                                                <li>• O cliente no topo da lista (marcado como "Próximo") é a prioridade.</li>
+                                                <li>• O cartão mostra o tempo de espera e se o SLA estourou.</li>
                                                 <li>• Clique no botão <strong>Atender</strong> para abrir o chat diretamente no Chatbot Maker.</li>
-                                                <li>• Use o campo de busca para encontrar um cliente específico pelo nome ou telefone.</li>
                                             </ul>
                                         </div>
                                     </section>
@@ -327,6 +362,13 @@ const UserGuide: React.FC<UserGuideProps> = ({ isOpen, onClose }) => {
                                             <p className="text-zinc-400">
                                                 No menu lateral esquerdo, lá embaixo, existe um botão <strong>Sair</strong>.
                                                 Ao clicar nele, você desconecta seu usuário atual e volta para a tela de seleção de perfil.
+                                            </p>
+                                        </div>
+
+                                        <div className="bg-zinc-900 p-6 rounded-xl border border-zinc-800">
+                                            <h3 className="text-lg font-bold text-white mb-2">Como altero o tempo de SLA?</h3>
+                                            <p className="text-zinc-400">
+                                                No modo TV Dashboard, clique no ícone de engrenagem no topo. Ajuste o valor em "Limite de Alerta SLA" e clique em Salvar. Isso afetará os indicadores de "SLA Crítico" imediatamente.
                                             </p>
                                         </div>
                                     </div>

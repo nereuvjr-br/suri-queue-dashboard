@@ -1,17 +1,18 @@
 import React, { useMemo } from 'react';
 import { SuriContact, SuriAttendant } from '../types';
 import { parseISO, subSeconds } from 'date-fns';
-import { formatSmartDuration } from '../utils';
+import { formatDurationFromSeconds, getBusinessDurationInSeconds } from '../utils';
 
 interface DepartmentStatusDashboardProps {
     activeContacts: SuriContact[];
     departmentMap: Record<string, string>;
     attendants: SuriAttendant[];
+    currentTime: Date;
 }
 
 const ALERT_LIMIT_MINUTES = Number(import.meta.env.VITE_AVG_TIME_ALERT_LIMIT) || 30;
 
-const DepartmentStatusDashboard: React.FC<DepartmentStatusDashboardProps> = ({ activeContacts, departmentMap, attendants }) => {
+const DepartmentStatusDashboard: React.FC<DepartmentStatusDashboardProps> = ({ activeContacts, departmentMap, attendants, currentTime }) => {
 
     const agentNameMap = useMemo(() => {
         return attendants.reduce((acc, curr) => {
@@ -22,14 +23,16 @@ const DepartmentStatusDashboard: React.FC<DepartmentStatusDashboardProps> = ({ a
 
     const departmentStats = useMemo(() => {
         const stats = new Map<string, { count: number, totalDuration: number, longestDuration: number, longestAgentName: string, agents: Set<string> }>();
-        const now = new Date();
+        const now = currentTime;
 
         activeContacts.forEach(contact => {
             // Try to get department from agent first, then fallback to contact fields
             const deptId = contact.agent?.departmentId || contact.departmentId || contact.defaultDepartmentId || 'unknown';
             const current = stats.get(deptId) || { count: 0, totalDuration: 0, longestDuration: 0, longestAgentName: '', agents: new Set<string>() };
 
-            const duration = Math.max(0, (now.getTime() - parseISO(contact.lastActivity).getTime()) / 1000);
+            const startTime = contact.agent?.dateAnswer ? parseISO(contact.agent.dateAnswer) : parseISO(contact.lastActivity);
+            // Use business seconds for duration (cumulative from previous days, respecting business hours)
+            const duration = getBusinessDurationInSeconds(startTime, now);
 
             const agentId = contact.agent?.platformUserId || '';
             const agentName = agentNameMap[agentId] || 'Desconhecido';
@@ -70,7 +73,7 @@ const DepartmentStatusDashboard: React.FC<DepartmentStatusDashboardProps> = ({ a
 
             return b.avgDuration - a.avgDuration;
         });
-    }, [activeContacts, departmentMap, agentNameMap]);
+    }, [activeContacts, departmentMap, agentNameMap, currentTime]);
 
     return (
         <div className="h-full overflow-hidden p-2 flex flex-col">
@@ -115,13 +118,13 @@ const DepartmentStatusDashboard: React.FC<DepartmentStatusDashboardProps> = ({ a
                                 <div className="flex flex-col items-center border-l border-zinc-800">
                                     <span className={`text-[9px] font-bold uppercase tracking-wider ${dept.avgDuration > ALERT_LIMIT_MINUTES * 60 ? 'text-red-500' : 'text-zinc-500'}`}>Médio</span>
                                     <span className={`text-sm font-mono font-bold leading-none ${dept.avgDuration > ALERT_LIMIT_MINUTES * 60 ? 'text-red-500 animate-pulse' : 'text-emerald-500'}`}>
-                                        {formatSmartDuration(subSeconds(new Date(), dept.avgDuration))}
+                                        {formatDurationFromSeconds(dept.avgDuration)}
                                     </span>
                                 </div>
                                 <div className="flex flex-col items-center border-l border-zinc-800 relative group/tooltip">
                                     <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Maior</span>
                                     <span className="text-sm font-mono font-bold text-amber-500 leading-none">
-                                        {formatSmartDuration(subSeconds(new Date(), dept.longestDuration))}
+                                        {formatDurationFromSeconds(dept.longestDuration)}
                                     </span>
                                     {/* Tooltip for Longest Agent Name */}
                                     <div className="absolute bottom-full mb-2 right-0 bg-zinc-900 text-white text-[10px] px-2 py-1 rounded border border-zinc-700 whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity z-50 pointer-events-none">

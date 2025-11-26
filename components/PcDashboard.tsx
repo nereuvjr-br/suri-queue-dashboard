@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppConfig, SuriContact, SuriAttendant } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,7 +9,7 @@ import PcDepartmentStatusDashboard from './PcDepartmentStatusDashboard';
 import UserGuide from './UserGuide';
 import ContactDetailsModal from './ContactDetailsModal';
 import ConfigModal from './ConfigModal';
-import { generateDashboardPages, getBusinessMinutes, formatSmartDuration } from '../utils';
+import { generateDashboardPages, getBusinessMinutes, formatSmartDuration, sortActiveContactsByDuration, formatDurationFromSeconds, getBusinessDurationInSeconds } from '../utils';
 import { parseISO, subSeconds } from 'date-fns';
 
 interface PcDashboardProps {
@@ -38,6 +38,13 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
     const [activeTab, setActiveTab] = useState<'waiting' | 'active' | 'attendants' | 'departments'>('waiting');
     const [isGuideOpen, setIsGuideOpen] = useState(false);
     const [selectedContact, setSelectedContact] = useState<SuriContact | null>(null);
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    // Clock
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     // Generate columns for Waiting View (No pagination, high limits)
     const waitingColumns = useMemo(() => {
@@ -47,56 +54,55 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
 
     // Generate columns for Active View (No pagination, high limits)
     const activeColumns = useMemo(() => {
-        const pages = generateDashboardPages(activeContacts, departmentMap, 1000, 1000); // High limits
+        const pages = generateDashboardPages(sortActiveContactsByDuration(activeContacts), departmentMap, 1000, 1000); // High limits
         return pages[0] || [];
     }, [activeContacts, departmentMap]);
 
-    // Metrics Calculation
     const metrics = useMemo(() => {
-        const now = new Date();
-        let totalWaitingSeconds = 0;
-        let maxWaitingSeconds = 0;
+        const totalWaiting = waitingContacts.length;
+        let longestWaitTimeSeconds = 0;
         let slaBreachedCount = 0;
+        let totalWaitTimeSeconds = 0;
 
-        // Active metrics
-        let totalActiveSeconds = 0;
+        waitingContacts.forEach(contact => {
+            // Use queue_start_time if available, otherwise fallback to lastActivity
+            const startTime = contact.queue_start_time ? parseISO(contact.queue_start_time) : parseISO(contact.lastActivity);
+            const waitDuration = getBusinessDurationInSeconds(startTime, currentTime);
 
-        waitingContacts.forEach(c => {
-            const activityDate = parseISO(c.lastActivity);
-            const businessMinutes = getBusinessMinutes(activityDate, now);
-            const businessSeconds = businessMinutes * 60;
-
-            totalWaitingSeconds += businessSeconds;
-            if (businessSeconds > maxWaitingSeconds) maxWaitingSeconds = businessSeconds;
-            if (businessMinutes >= (config.slaLimit || 15)) slaBreachedCount++;
+            if (waitDuration > longestWaitTimeSeconds) {
+                longestWaitTimeSeconds = waitDuration;
+            }
+            if (waitDuration > (config.slaLimit * 60)) {
+                slaBreachedCount++;
+            }
+            totalWaitTimeSeconds += waitDuration;
         });
 
+        const avgWaitTimeSeconds = totalWaiting > 0 ? Math.floor(totalWaitTimeSeconds / totalWaiting) : 0;
+
+        let totalActiveSeconds = 0;
         activeContacts.forEach(c => {
-            const duration = Math.max(0, (now.getTime() - parseISO(c.lastActivity).getTime()) / 1000);
+            // Use dateAnswer if available (start of attendance), otherwise fallback to lastActivity
+            const startTime = c.agent?.dateAnswer ? parseISO(c.agent.dateAnswer) : parseISO(c.lastActivity);
+            const duration = getBusinessDurationInSeconds(startTime, currentTime);
             totalActiveSeconds += duration;
         });
 
         return {
-            totalWaiting: waitingContacts.length,
-            activeContacts,
-            avgWaitTimeSeconds: waitingContacts.length > 0 ? Math.floor(totalWaitingSeconds / waitingContacts.length) : 0,
-            longestWaitTimeSeconds: maxWaitingSeconds,
+            totalWaiting,
+            longestWaitTimeSeconds,
             slaBreachedCount,
+            avgWaitTimeSeconds,
+            activeContacts,
             avgActiveTimeSeconds: activeContacts.length > 0 ? Math.floor(totalActiveSeconds / activeContacts.length) : 0
         };
-    }, [waitingContacts, activeContacts, config.slaLimit]);
+    }, [waitingContacts, activeContacts, config.slaLimit, currentTime]);
 
     return (
-        <div className="h-screen bg-zinc-950 text-zinc-200 font-sans flex flex-col relative overflow-hidden selection:bg-blue-500 selection:text-white">
-            {/* Header */}
-            <header className="h-16 shrink-0 industrial-header px-6 flex items-center justify-between z-20 relative border-b border-zinc-800 bg-zinc-900/50">
+        <div className="flex flex-col h-screen bg-zinc-950 text-white font-sans">
+            <header className="h-20 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-6 shrink-0">
                 <div className="flex items-center gap-4">
-                    <div className="w-8 h-8 rounded bg-zinc-800 flex items-center justify-center border border-zinc-700 shadow-inner">
-                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                    </div>
-                    <div>
+                    <div className="flex flex-col">
                         <h1 className="text-xl font-black tracking-tighter text-white uppercase industrial-gradient-text">
                             Koerner
                         </h1>
@@ -181,13 +187,13 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
                     <div className="w-px h-6 bg-zinc-800 shrink-0" />
                     <div className="flex flex-col items-end">
                         <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">T. Médio Esp.</span>
-                        <span className="text-lg font-mono font-bold text-white leading-none">{formatSmartDuration(subSeconds(new Date(), metrics.avgWaitTimeSeconds))}</span>
+                        <span className="text-lg font-mono font-bold text-white leading-none">{formatDurationFromSeconds(metrics.avgWaitTimeSeconds)}</span>
                     </div>
                     <div className="w-px h-6 bg-zinc-800 shrink-0" />
                     <div className="flex flex-col items-end">
                         <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Max Espera</span>
                         <span className={`text-lg font-mono font-bold leading-none ${metrics.longestWaitTimeSeconds > 600 ? 'text-amber-500' : 'text-white'}`}>
-                            {formatSmartDuration(subSeconds(new Date(), metrics.longestWaitTimeSeconds))}
+                            {formatDurationFromSeconds(metrics.longestWaitTimeSeconds)}
                         </span>
                     </div>
                     <div className="w-px h-6 bg-zinc-800 shrink-0" />
@@ -200,7 +206,7 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
                     <div className="w-px h-6 bg-zinc-800 shrink-0" />
                     <div className="flex flex-col items-end">
                         <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">T. Médio Ativo</span>
-                        <span className="text-lg font-mono font-bold text-emerald-500 leading-none">{formatSmartDuration(subSeconds(new Date(), metrics.avgActiveTimeSeconds))}</span>
+                        <span className="text-lg font-mono font-bold text-emerald-500 leading-none">{formatDurationFromSeconds(metrics.avgActiveTimeSeconds)}</span>
                     </div>
                 </div>
             </div>
@@ -214,6 +220,7 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
                         onContactClick={setSelectedContact}
                     />
                 )}
+
                 {activeTab === 'active' && (
                     <PcActiveTeamDashboard
                         columns={activeColumns}
@@ -221,28 +228,40 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
                         onContactClick={setSelectedContact}
                     />
                 )}
+
                 {activeTab === 'attendants' && (
-                    <PcAttendantStatusDashboard attendants={attendants} activeContacts={activeContacts} />
+                    <PcAttendantStatusDashboard
+                        attendants={attendants}
+                        activeContacts={activeContacts}
+                        currentTime={currentTime}
+                    />
                 )}
+
                 {activeTab === 'departments' && (
-                    <PcDepartmentStatusDashboard activeContacts={activeContacts} departmentMap={departmentMap} attendants={attendants} />
+                    <PcDepartmentStatusDashboard
+                        activeContacts={activeContacts}
+                        departmentMap={departmentMap}
+                        attendants={attendants}
+                        currentTime={currentTime}
+                    />
                 )}
+
+                <UserGuide isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
+                <ContactDetailsModal
+                    contact={selectedContact}
+                    onClose={() => setSelectedContact(null)}
+                    departmentMap={departmentMap}
+                    attendants={attendants}
+                    slaLimit={config.slaLimit}
+                />
+                <ConfigModal
+                    isOpen={isConfigOpen}
+                    onClose={() => setIsConfigOpen(false)}
+                    onSave={onSaveConfig}
+                    initialConfig={config}
+                    departmentMap={departmentMap}
+                />
             </main>
-            <UserGuide isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
-            <ContactDetailsModal
-                contact={selectedContact}
-                onClose={() => setSelectedContact(null)}
-                departmentMap={departmentMap}
-                attendants={attendants}
-                slaLimit={config.slaLimit}
-            />
-            <ConfigModal
-                isOpen={isConfigOpen}
-                onClose={() => setIsConfigOpen(false)}
-                onSave={onSaveConfig}
-                initialConfig={config}
-                departmentMap={departmentMap}
-            />
         </div>
     );
 };

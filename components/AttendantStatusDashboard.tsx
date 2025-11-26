@@ -1,28 +1,31 @@
 import React, { useMemo } from 'react';
 import { SuriAttendant, SuriContact } from '../types';
 import { parseISO, subSeconds } from 'date-fns';
-import { formatSmartDuration } from '../utils';
+import { formatDurationFromSeconds, getBusinessDurationInSeconds } from '../utils';
 
 interface AttendantStatusDashboardProps {
     attendants: SuriAttendant[];
     activeContacts: SuriContact[];
+    currentTime: Date;
 }
 
 const ALERT_LIMIT_MINUTES = Number(import.meta.env.VITE_AVG_TIME_ALERT_LIMIT) || 30;
 
-const AttendantStatusDashboard: React.FC<AttendantStatusDashboardProps> = ({ attendants, activeContacts }) => {
+const AttendantStatusDashboard: React.FC<AttendantStatusDashboardProps> = ({ attendants, activeContacts, currentTime }) => {
 
     const attendantStats = useMemo(() => {
         // Count active contacts and calculate duration per attendant
         const stats = new Map<string, { count: number, totalDuration: number, longestDuration: number, longestContactName: string }>();
-        const now = new Date();
+        const now = currentTime;
 
         activeContacts.forEach(contact => {
             const agentId = contact.agent?.platformUserId;
             if (agentId) {
                 const current = stats.get(agentId) || { count: 0, totalDuration: 0, longestDuration: 0, longestContactName: '' };
-                // Using lastActivity as the reference for duration, consistent with other dashboards
-                const duration = Math.max(0, (now.getTime() - parseISO(contact.lastActivity).getTime()) / 1000);
+                // Using dateAnswer if available (start of attendance), otherwise fallback to lastActivity
+                const startTime = contact.agent?.dateAnswer ? parseISO(contact.agent.dateAnswer) : parseISO(contact.lastActivity);
+                // Use business seconds for duration (cumulative from previous days, respecting business hours)
+                const duration = getBusinessDurationInSeconds(startTime, now);
 
                 if (duration > current.longestDuration) {
                     current.longestDuration = duration;
@@ -46,7 +49,7 @@ const AttendantStatusDashboard: React.FC<AttendantStatusDashboardProps> = ({ att
                 return {
                     ...attendant,
                     activeCount: stat.count,
-                    avgDuration: stat.totalDuration / stat.count,
+                    avgDuration: stat.count > 0 ? stat.totalDuration / stat.count : 0,
                     longestDuration: stat.longestDuration,
                     longestContactName: stat.longestContactName
                 };
@@ -61,7 +64,7 @@ const AttendantStatusDashboard: React.FC<AttendantStatusDashboardProps> = ({ att
 
                 return b.avgDuration - a.avgDuration;
             });
-    }, [attendants, activeContacts]);
+    }, [attendants, activeContacts, currentTime]);
 
     const getStatusColor = (status: number) => {
         switch (status) {
@@ -133,13 +136,13 @@ const AttendantStatusDashboard: React.FC<AttendantStatusDashboardProps> = ({ att
                                 <div className="flex flex-col items-center border-l border-zinc-800">
                                     <span className={`text-[9px] font-bold uppercase tracking-wider ${attendant.avgDuration > ALERT_LIMIT_MINUTES * 60 ? 'text-red-500' : 'text-zinc-500'}`}>Médio</span>
                                     <span className={`text-sm font-mono font-bold leading-none ${attendant.avgDuration > ALERT_LIMIT_MINUTES * 60 ? 'text-red-500 animate-pulse' : 'text-emerald-500'}`}>
-                                        {formatSmartDuration(subSeconds(new Date(), attendant.avgDuration))}
+                                        {formatDurationFromSeconds(attendant.avgDuration)}
                                     </span>
                                 </div>
                                 <div className="flex flex-col items-center border-l border-zinc-800 relative group/tooltip">
                                     <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Maior</span>
                                     <span className="text-sm font-mono font-bold text-amber-500 leading-none">
-                                        {formatSmartDuration(subSeconds(new Date(), attendant.longestDuration))}
+                                        {formatDurationFromSeconds(attendant.longestDuration)}
                                     </span>
                                     {/* Tooltip for Longest Contact Name */}
                                     <div className="absolute bottom-full mb-2 right-0 bg-zinc-900 text-white text-[10px] px-2 py-1 rounded border border-zinc-700 whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity z-50 pointer-events-none">

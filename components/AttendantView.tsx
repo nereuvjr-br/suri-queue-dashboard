@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { SuriContact, SuriAttendant } from '../types';
-import { getDepartmentName, formatSmartDuration } from '../utils';
+import { getDepartmentName, formatSmartDuration, getSlaStatus, getAttendanceDuration, getBusinessDurationInSeconds, formatDurationFromSeconds } from '../utils';
 import { parseISO, subSeconds } from 'date-fns';
 import PhoneDisplay from './PhoneDisplay';
 import UserGuide from './UserGuide';
@@ -113,20 +113,20 @@ const AttendantView: React.FC<AttendantViewProps> = ({
         myActiveChats.forEach(c => {
             // Use dateAnswer (start of attendance) or fallback to lastActivity
             const startDate = c.agent?.dateAnswer ? parseISO(c.agent.dateAnswer) : parseISO(c.lastActivity);
-            const seconds = Math.max(0, (now.getTime() - startDate.getTime()) / 1000);
+            const seconds = getBusinessDurationInSeconds(startDate, now);
 
             totalSeconds += seconds;
             if (seconds > maxSeconds) maxSeconds = seconds;
         });
 
-        const avgSeconds = totalSeconds / myActiveChats.length;
+        const avgSeconds = myActiveChats.length > 0 ? totalSeconds / myActiveChats.length : 0;
         const isHigh = maxSeconds > (ALERT_THRESHOLD_MINUTES * 60);
 
         return {
             avg: avgSeconds,
             max: maxSeconds,
-            avgStr: formatSmartDuration(subSeconds(now, avgSeconds)),
-            maxStr: formatSmartDuration(subSeconds(now, maxSeconds)),
+            avgStr: formatDurationFromSeconds(avgSeconds),
+            maxStr: formatDurationFromSeconds(maxSeconds),
             isHigh
         };
     }, [myActiveChats, now]);
@@ -589,10 +589,28 @@ const AttendantView: React.FC<AttendantViewProps> = ({
 
                                                 <div className="pt-4 border-t border-white/5 flex items-end justify-between mt-auto gap-3">
                                                     <div className="flex flex-col gap-0.5">
-                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tempo</span>
-                                                        <span className={`font-mono font-bold text-lg ${activeTab === 'waiting' ? 'text-indigo-400' : 'text-emerald-400'}`}>
-                                                            {formatSmartDuration(startTime)}
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                            {activeTab === 'waiting' ? 'Espera' : 'Duração'}
                                                         </span>
+                                                        {activeTab === 'waiting' ? (
+                                                            <div className="flex flex-col">
+                                                                <span className="font-mono font-bold text-lg text-indigo-400">
+                                                                    {formatSmartDuration(startTime)}
+                                                                </span>
+                                                                {(() => {
+                                                                    const slaStatus = getSlaStatus(contact, 15); // Default SLA 15m if not passed prop
+                                                                    return (
+                                                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded w-fit ${slaStatus.isOverdue ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                                                                            {slaStatus.isOverdue ? 'Estourado' : 'SLA'} {slaStatus.formattedTime}
+                                                                        </span>
+                                                                    );
+                                                                })()}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="font-mono font-bold text-lg text-emerald-400">
+                                                                {getAttendanceDuration(contact)}
+                                                            </span>
+                                                        )}
                                                     </div>
 
                                                     {activeTab === 'active' ? (

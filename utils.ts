@@ -1,4 +1,4 @@
-import { differenceInMinutes, differenceInHours, differenceInDays, differenceInMonths, addDays, startOfDay, endOfDay, isSameDay, isWeekend } from 'date-fns';
+import { differenceInMinutes, differenceInHours, differenceInDays, differenceInMonths, addDays, startOfDay, endOfDay, isSameDay, isWeekend, parseISO, subSeconds } from 'date-fns';
 import { SuriContact } from './types';
 
 const BUSINESS_START_HOUR = Number(import.meta.env.VITE_BUSINESS_START_HOUR) || 8;
@@ -57,6 +57,72 @@ export const formatSmartDuration = (dateInput: string | Date): string => {
     }
 };
 
+export interface SlaStatus {
+    isOverdue: boolean;
+    minutesOverdue: number;
+    minutesRemaining: number;
+    formattedTime: string;
+    percentage: number; // 0 to 100 (or more if overdue)
+}
+
+export const getSlaStatus = (contact: SuriContact, slaLimit: number): SlaStatus => {
+    const now = new Date();
+    const waitTime = parseISO(contact.lastActivity);
+    const minutesWaiting = getBusinessMinutes(waitTime, now);
+
+    const isOverdue = minutesWaiting >= slaLimit;
+    const minutesOverdue = isOverdue ? minutesWaiting - slaLimit : 0;
+    const minutesRemaining = isOverdue ? 0 : slaLimit - minutesWaiting;
+
+    let formattedTime = '';
+    if (isOverdue) {
+        formattedTime = `-${minutesOverdue}m`;
+    } else {
+        formattedTime = `${minutesRemaining}m`;
+    }
+
+    const percentage = Math.min(100, Math.max(0, (minutesWaiting / slaLimit) * 100));
+
+    return {
+        isOverdue,
+        minutesOverdue,
+        minutesRemaining,
+        formattedTime,
+        percentage
+    };
+};
+
+export const formatDurationFromSeconds = (totalSeconds: number): string => {
+    const minutes = Math.floor(totalSeconds / 60);
+    const hours = Math.floor(minutes / 60);
+
+    if (minutes < 60) {
+        return `${minutes}m`;
+    } else if (hours < 24) {
+        const remainingMinutes = minutes % 60;
+        return `${hours}h ${remainingMinutes}m`;
+    } else {
+        const days = Math.floor(hours / 24);
+        const remainingHours = hours % 24;
+        return `${days}d ${remainingHours}h`;
+    }
+};
+
+export const getBusinessDurationInSeconds = (start: Date | string, end: Date | string): number => {
+    return getBusinessMinutes(start, end) * 60;
+};
+
+export const getAttendanceDuration = (contact: SuriContact): string => {
+    const now = new Date();
+    // Use dateAnswer if available (start of attendance), otherwise fallback to lastActivity
+    const startDate = contact.agent?.dateAnswer
+        ? parseISO(contact.agent.dateAnswer)
+        : parseISO(contact.lastActivity);
+
+    const seconds = getBusinessDurationInSeconds(startDate, now);
+    return formatDurationFromSeconds(seconds);
+};
+
 export const getDepartmentName = (contact: SuriContact, map: Record<string, string>): string => {
     // Try specific department first, then agent's department, then default
     const id = contact.departmentId || contact.agent?.departmentId || contact.defaultDepartmentId;
@@ -102,6 +168,14 @@ export interface DashboardColumn {
     startPosition?: number; // Starting queue position for this column
     hasMore?: boolean; // Indicates if the queue continues in the next column
 }
+
+export const sortActiveContactsByDuration = (contacts: SuriContact[]): SuriContact[] => {
+    return [...contacts].sort((a, b) => {
+        const startA = a.agent?.dateAnswer ? parseISO(a.agent.dateAnswer).getTime() : parseISO(a.lastActivity).getTime();
+        const startB = b.agent?.dateAnswer ? parseISO(b.agent.dateAnswer).getTime() : parseISO(b.lastActivity).getTime();
+        return startA - startB; // Ascending start time = Descending duration (Longest first)
+    });
+};
 
 export function generateDashboardPages(
     contacts: SuriContact[],

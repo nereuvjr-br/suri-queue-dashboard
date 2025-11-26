@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { SuriAttendant, SuriContact } from '../types';
 import { parseISO } from 'date-fns';
-import { formatSmartDuration, DashboardColumn } from '../utils';
+import { formatSmartDuration, DashboardColumn, getAttendanceDuration } from '../utils';
 import PhoneDisplay from './PhoneDisplay';
 
 // Component for displaying active team dashboard
@@ -88,7 +88,7 @@ const PcActiveTeamDashboard: React.FC<PcActiveTeamDashboardProps> = ({ columns, 
                                                         <div className="flex flex-col items-end shrink-0 bg-zinc-950 px-2 py-1 border border-zinc-800">
                                                             <span className="text-[8px] uppercase tracking-wider font-bold text-zinc-600 mb-0.5">Duração</span>
                                                             <span className="text-sm font-mono font-bold text-emerald-500 leading-none">
-                                                                {formatSmartDuration(startTime)}
+                                                                {getAttendanceDuration(contact)}
                                                             </span>
                                                         </div>
                                                     </div>
