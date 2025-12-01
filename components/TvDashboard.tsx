@@ -242,40 +242,80 @@ const TvDashboard: React.FC<TvDashboardProps> = ({
             </header>
             {/* Main Content Area */}
             <main className={`flex-1 flex flex-col overflow-hidden relative ${currentView?.type === 'external' ? '' : 'p-3 gap-3'}`}>
-                {currentView?.type === 'waiting' && (
-                    <WaitingTable
-                        columns={currentView.columns}
-                        slaLimit={config.slaLimit || 15}
-                    />
-                )}
 
-                {currentView?.type === 'active' && (
-                    <ActiveTeamDashboard
-                        columns={currentView.columns}
-                        attendants={attendants}
-                    />
-                )}
+                {/* Screen Title & Description */}
+                <div className={`shrink-0 flex items-center justify-between ${currentView?.type === 'external' ? 'bg-zinc-950 p-3 border-b border-zinc-800' : 'px-2'}`}>
+                    <div>
+                        <h2 className="text-2xl font-black text-white uppercase tracking-tight flex items-center gap-3">
+                            {(() => {
+                                switch (currentView?.type) {
+                                    case 'waiting': return 'Fila de Espera';
+                                    case 'active': return 'Atendimentos Ativos';
+                                    case 'attendants': return 'Performance da Equipe';
+                                    case 'departments': return 'Visão Departamental';
+                                    case 'external': return 'Visualização Externa';
+                                    default: return 'Dashboard';
+                                }
+                            })()}
+                            {(currentView?.type === 'waiting' || currentView?.type === 'active') && (
+                                <span className="text-xs font-bold text-zinc-500 bg-zinc-900 px-2 py-1 rounded border border-zinc-800 tracking-wider">
+                                    PÁGINA {currentView.pageIndex + 1}
+                                </span>
+                            )}
+                        </h2>
+                        <p className="text-zinc-400 text-sm font-medium mt-0.5">
+                            {(() => {
+                                switch (currentView?.type) {
+                                    case 'waiting': return 'Acompanhamento em tempo real dos clientes aguardando atendimento.';
+                                    case 'active': return 'Visão geral dos atendimentos em andamento e distribuição por equipe.';
+                                    case 'attendants': return 'Status, disponibilidade e métricas individuais dos atendentes.';
+                                    case 'departments': return 'Análise de volume e métricas agrupadas por departamento.';
+                                    case 'external': return 'Conteúdo externo integrado ao dashboard.';
+                                    default: return '';
+                                }
+                            })()}
+                        </p>
+                    </div>
+                    <div className={`h-px flex-1 bg-gradient-to-r from-zinc-800 to-transparent ml-8 ${currentView?.type === 'external' ? 'hidden' : ''}`} />
+                </div>
 
-                {currentView?.type === 'attendants' && (
-                    <AttendantStatusDashboard
-                        attendants={attendants}
-                        activeContacts={activeContacts}
-                        currentTime={currentTime}
-                    />
-                )}
+                {/* Content Container */}
+                <div className="flex-1 relative overflow-hidden">
+                    {currentView?.type === 'waiting' && (
+                        <WaitingTable
+                            columns={currentView.columns}
+                            slaLimit={config.slaLimit || 15}
+                        />
+                    )}
 
-                {currentView?.type === 'departments' && (
-                    <DepartmentStatusDashboard
-                        activeContacts={activeContacts}
-                        departmentMap={departmentMap}
-                        attendants={attendants}
-                        currentTime={currentTime}
-                    />
-                )}
+                    {currentView?.type === 'active' && (
+                        <ActiveTeamDashboard
+                            columns={currentView.columns}
+                            attendants={attendants}
+                        />
+                    )}
 
-                {currentView?.type === 'external' && (
-                    <ExternalIframeView url={currentView.url} />
-                )}
+                    {currentView?.type === 'attendants' && (
+                        <AttendantStatusDashboard
+                            attendants={attendants}
+                            activeContacts={activeContacts}
+                            currentTime={currentTime}
+                        />
+                    )}
+
+                    {currentView?.type === 'departments' && (
+                        <DepartmentStatusDashboard
+                            activeContacts={activeContacts}
+                            departmentMap={departmentMap}
+                            attendants={attendants}
+                            currentTime={currentTime}
+                        />
+                    )}
+
+                    {currentView?.type === 'external' && (
+                        <ExternalIframeView url={currentView.url} />
+                    )}
+                </div>
 
                 {/* Modals */}
                 {isConfigOpen && (

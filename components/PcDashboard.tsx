@@ -226,39 +226,68 @@ const PcDashboard: React.FC<PcDashboardProps> = ({
                 </div>
             </div>
 
-            <main className="flex-1 overflow-hidden relative bg-zinc-950">
-                {activeTab === 'waiting' && (
-                    <PcWaitingTable
-                        columns={waitingColumns}
-                        slaLimit={config.slaLimit}
-                        onContactClick={setSelectedContact}
-                    />
-                )}
+            <main className="flex-1 overflow-hidden relative bg-zinc-950 flex flex-col">
+                {/* Tab Header */}
+                <div className="shrink-0 px-6 py-4 border-b border-zinc-900 bg-zinc-950/50">
+                    <h2 className="text-2xl font-black text-white uppercase tracking-tight">
+                        {(() => {
+                            switch (activeTab) {
+                                case 'waiting': return 'Fila de Espera';
+                                case 'active': return 'Atendimentos Ativos';
+                                case 'attendants': return 'Equipe de Atendimento';
+                                case 'departments': return 'Visão por Departamento';
+                                default: return '';
+                            }
+                        })()}
+                    </h2>
+                    <p className="text-zinc-400 text-sm font-medium mt-0.5">
+                        {(() => {
+                            switch (activeTab) {
+                                case 'waiting': return 'Gerenciamento e visualização da fila de atendimento em tempo real.';
+                                case 'active': return 'Monitoramento detalhado dos atendimentos em andamento.';
+                                case 'attendants': return 'Visão geral da performance, status e disponibilidade dos atendentes.';
+                                case 'departments': return 'Métricas consolidadas e análise de volume por departamento.';
+                                default: return '';
+                            }
+                        })()}
+                    </p>
+                </div>
 
-                {activeTab === 'active' && (
-                    <PcActiveTeamDashboard
-                        columns={activeColumns}
-                        attendants={attendants}
-                        onContactClick={setSelectedContact}
-                    />
-                )}
+                {/* Tab Content */}
+                <div className="flex-1 overflow-hidden relative p-4">
+                    {activeTab === 'waiting' && (
+                        <PcWaitingTable
+                            columns={waitingColumns}
+                            slaLimit={config.slaLimit}
+                            onContactClick={setSelectedContact}
+                        />
+                    )}
 
-                {activeTab === 'attendants' && (
-                    <PcAttendantStatusDashboard
-                        attendants={attendants}
-                        activeContacts={activeContacts}
-                        currentTime={currentTime}
-                    />
-                )}
+                    {activeTab === 'active' && (
+                        <PcActiveTeamDashboard
+                            columns={activeColumns}
+                            attendants={attendants}
+                            onContactClick={setSelectedContact}
+                        />
+                    )}
 
-                {activeTab === 'departments' && (
-                    <PcDepartmentStatusDashboard
-                        activeContacts={activeContacts}
-                        departmentMap={departmentMap}
-                        attendants={attendants}
-                        currentTime={currentTime}
-                    />
-                )}
+                    {activeTab === 'attendants' && (
+                        <PcAttendantStatusDashboard
+                            attendants={attendants}
+                            activeContacts={activeContacts}
+                            currentTime={currentTime}
+                        />
+                    )}
+
+                    {activeTab === 'departments' && (
+                        <PcDepartmentStatusDashboard
+                            activeContacts={activeContacts}
+                            departmentMap={departmentMap}
+                            attendants={attendants}
+                            currentTime={currentTime}
+                        />
+                    )}
+                </div>
 
                 <UserGuide isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
                 <ContactDetailsModal
